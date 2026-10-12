@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# fnOS creates the package data directory after install_init.
+echo "FrpDesk install init"

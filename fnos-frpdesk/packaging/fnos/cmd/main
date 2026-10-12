@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=common
+source "$(dirname "${BASH_SOURCE[0]}")/common"
+
+usage() {
+  echo "Usage: $0 {start|stop|restart|status|install-autostart|remove-autostart}"
+}
+
+case "${1:-}" in
+  start)
+    ensure_runtime_dirs
+    if systemd_available && [ -f "$SERVICE_FILE" ]; then
+      mkdir -p "$(dirname "$RUNTIME_MARKER")"
+      touch "$RUNTIME_MARKER"
+      systemctl start "$SERVICE_NAME"
+    else
+      exec "$APP_DIR/scripts/start.sh"
+    fi
+    ;;
+  stop)
+    exec "$APP_DIR/scripts/stop.sh"
+    ;;
+  restart)
+    "$0" stop
+    exec "$0" start
+    ;;
+  status)
+    exec "$APP_DIR/scripts/status.sh"
+    ;;
+  install-autostart)
+    install_autostart
+    ;;
+  remove-autostart)
+    remove_autostart
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

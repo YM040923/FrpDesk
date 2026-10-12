@@ -35,7 +35,7 @@ $publishArgs = @(
 & dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败，退出码：$LASTEXITCODE" }
 
-Copy-Item (Join-Path $root "README.md") (Join-Path $packageRoot "README.md") -Force
+Copy-Item (Join-Path $root "README-WINDOWS.md") (Join-Path $packageRoot "README.md") -Force
 Copy-Item (Join-Path $root "RELEASE_NOTES.md") (Join-Path $packageRoot "RELEASE_NOTES.md") -Force
 Copy-Item (Join-Path $PSScriptRoot "Install-FrpDesk.ps1") (Join-Path $packageRoot "Install-FrpDesk.ps1") -Force
 Copy-Item (Join-Path $PSScriptRoot "Uninstall-FrpDesk.ps1") (Join-Path $packageRoot "Uninstall-FrpDesk.ps1") -Force

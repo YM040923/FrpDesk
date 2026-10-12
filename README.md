@@ -1,44 +1,28 @@
 # FrpDesk
 
-A small Windows desktop manager for multiple independent `frpc` TOML configurations.
+FrpDesk 是一款管理 FRP 客户端与 TOML 配置的工具，包含 **Windows 桌面版**和**飞牛原生版**。两版使用不同的程序和安装包，源码分别放在各自目录。
 
-- Paste or import a TOML file, save it as an instance, then start or stop it independently.
-- Each configuration runs as its own `frpc` process and stores its logs in the app window.
-- The official FRP Windows x64 client is bundled; no separate FRP installation is required.
-- Profiles live under `%LOCALAPPDATA%\FrpDesk\instances\`.
-- Closing the window hides FrpDesk in the system tray; choose “退出 FrpDesk” from the tray menu to stop foreground `frpc` processes.
-- Use “后台运行” for an instance that must survive closing the window, disconnecting RDP, and logging off. FrpDesk registers one Windows service per instance, set to start automatically with Windows; Windows will request administrator approval when the switch is enabled or disabled.
-- The service host runs the bundled `frpc.exe` under a per-instance virtual service account and retries unexpected exits after 30 seconds, 1 minute, 2 minutes, and 4 minutes. After five starts it reports “后台重试耗尽” and waits for the user to turn the switch on again.
-- The app keeps a diagnostic summary for each instance. TOML validation failures, frpc startup failures, unexpected exits, connection/authentication errors, background service failures, and exhausted retries are classified separately, with the latest detail, exit code, time, and suggested next step available in the instance panel and copyable with “复制诊断”.
-- The instance list has a quick run/stop action for each foreground instance. “全部运行” starts all stopped foreground instances together; Windows service instances are skipped and remain managed by their service switch. “全部停止” stops both foreground processes and configured background services.
-- The settings page is a full page inside the main window. It controls close-to-tray behavior, remembered window layout, in-memory log retention, and opening the local data directory. It does not duplicate per-instance background service controls.
-- The address page lets you choose any saved profile and copy each proxy's local address, public TCP/UDP endpoint, HTTP/HTTPS domain, or access-side name for private proxy types. It also supports copying the complete address list for the selected profile.
-- The profile editor can validate the pasted TOML with the bundled `frpc` before saving, shows the current character count, supports import, clear, select-all, and warns before discarding unsaved changes.
-- A running foreground instance can apply a saved configuration with “重载配置”. When the TOML enables an frpc management API, FrpDesk uses `frpc reload`; otherwise it restarts that instance to apply the file. A background-service instance is restarted through its Windows service so it remains independent of the desktop session.
-- Background services are not created automatically for existing profiles. Enable “后台运行” for each profile that should start with Windows.
+| 版本 | 源码位置 | 技术与安装包 | 说明 |
+|---|---|---|---|
+| Windows 桌面版 | 仓库根目录 | C#、WPF、.NET 10；Windows x64 ZIP 安装包 | [Windows 使用、构建与发布说明](README-WINDOWS.md)，[Windows 更新记录](RELEASE_NOTES.md) |
+| 飞牛原生版 | [`fnos-frpdesk/`](fnos-frpdesk/) | Go Core、静态网页界面；飞牛 x86_64 `.fpk` 安装包 | [飞牛版源码与构建说明](fnos-frpdesk/README.md) |
 
-## Build
+## 源码结构
 
-Requires the .NET 10 SDK on Windows:
+- 根目录的 `App.xaml`、`MainWindow.xaml`、`Models/`、`Services/`、`Views/` 和 `scripts/` 属于 Windows 桌面版。
+- `fnos-frpdesk/core/`、`web/`、`packaging/`、`resources/` 和 `scripts/` 属于飞牛原生版。
+- 两版都支持多实例和 TOML 配置，但各自独立构建、安装和保存运行数据。
 
-```powershell
-./scripts/Fetch-Frpc.ps1
-dotnet run
-dotnet publish -c Release -o publish
-```
+## 版本
 
-`Fetch-Frpc.ps1` downloads official FRP v0.71.0, verifies its published SHA256, and extracts `frpc.exe` and its license into `assets/`. The app is published as a self-contained single-file executable with `assets/frpc.exe` beside it.
+- Windows 桌面版：`0.1.1`。
+- 飞牛原生版：`0.1.13`，版本号定义在 [`fnos-frpdesk/package.json`](fnos-frpdesk/package.json)。
 
-The FRP project and included client are distributed under their upstream license in [`assets/frp-LICENSE`](assets/frp-LICENSE). FrpDesk is an independent, unofficial client.
+## 构建入口
 
-## Release
+- Windows：按 [Windows 构建说明](README-WINDOWS.md)运行 `scripts/Fetch-Frpc.ps1` 和发布脚本。
+- 飞牛：按[飞牛构建说明](fnos-frpdesk/README.md)构建 Core、准备运行目录并生成 `.fpk`。
 
-Create the versioned Windows x64 package with:
+Windows 发布压缩包和飞牛 `.fpk` 都是构建产物，不作为源码提交；可在对应的 `artifacts/` 或 `dist/` 目录生成。
 
-```powershell
-./scripts/Publish-Release.ps1 -Version 0.1.1
-```
-
-The package is written to `artifacts/` as a self-contained ZIP plus a SHA256 file. Extract it and run `Install-FrpDesk.cmd` for a per-user installation. Uninstalling preserves profiles and logs under `%LOCALAPPDATA%\FrpDesk`; the uninstaller only removes the registered FrpDesk installation directory. Close FrpDesk and every configured background service before uninstalling.
-
-When upgrading, close FrpDesk and turn off every configured background service first. The installer verifies the release manifest and stops if an old service could otherwise keep using the previous installation.
+FrpDesk 是独立项目，不是 FrpPilot。当前仓库为私有仓库；FrpDesk 自身的再分发许可证尚未声明。

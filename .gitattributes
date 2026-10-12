@@ -1,0 +1,4 @@
+/fnos-frpdesk/scripts/*.sh text eol=lf
+/fnos-frpdesk/packaging/fnos/app/scripts/*.sh text eol=lf
+/fnos-frpdesk/packaging/fnos/cmd/* text eol=lf
+/fnos-frpdesk/frpdesk-template/cmd/* text eol=lf

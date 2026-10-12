@@ -13,10 +13,11 @@ artifacts/
 /.verify-address.py
 /quality-gate.md
 
-# Other platform and historical workspace copies are managed separately
+# The current native fnOS source is in fnos-frpdesk/
 /fnos/
-/fnos-frpdesk/
+/fnos-frpdesk/dist/
+/fnos-frpdesk/frpdesk-template/
+**/.DS_Store
 
-# Downloaded FRP runtime is restored by scripts/Fetch-Frpc.ps1
+# Downloaded Windows FRP runtime is restored by scripts/Fetch-Frpc.ps1
 /assets/frpc.exe
-/assets/frp-LICENSE

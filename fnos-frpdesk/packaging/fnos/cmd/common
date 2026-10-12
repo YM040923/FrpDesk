@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+
+resolve_package_base() {
+  if [ -n "${TRIM_APPDEST:-}" ]; then
+    resolve_path "$TRIM_APPDEST"
+    return
+  fi
+  if [ -n "${SYNOPKG_PKGDEST:-}" ]; then
+    resolve_path "$SYNOPKG_PKGDEST"
+    return
+  fi
+  cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
+}
+
+resolve_path() {
+  local path="$1"
+  if [ -d "$path" ]; then
+    cd "$path" && pwd
+    return
+  fi
+  case "$path" in
+    /*)
+      printf '%s\n' "$path"
+      ;;
+    *)
+      printf '%s/%s\n' "$(pwd)" "$path"
+      ;;
+  esac
+}
+
+resolve_app_dir() {
+  if [ -n "${FRPDESK_APP_DIR:-}" ]; then
+    resolve_path "$FRPDESK_APP_DIR"
+    return
+  fi
+  if [ -d "/var/apps/frpdesk/target" ]; then
+    resolve_path "/var/apps/frpdesk/target"
+    return
+  fi
+  if [ -n "${TRIM_APPDEST:-}" ]; then
+    resolve_path "$TRIM_APPDEST"
+    return
+  fi
+  if [ -d "$PACKAGE_BASE/app" ]; then
+    resolve_path "$PACKAGE_BASE/app"
+    return
+  fi
+  resolve_path "$PACKAGE_BASE"
+}
+
+PACKAGE_BASE="$(resolve_package_base)"
+APP_DIR="$(resolve_app_dir)"
+VAR_DIR="$(resolve_path "${FRPDESK_VAR_DIR:-${TRIM_PKGVAR:-$PACKAGE_BASE/var}}")"
+RUN_DIR="$VAR_DIR/run"
+LOG_DIR="$VAR_DIR/log"
+DATA_DIR="$VAR_DIR/data"
+
+export FRPDESK_DATA_DIR="${FRPDESK_DATA_DIR:-$DATA_DIR}"
+export FRPDESK_PID_FILE="${FRPDESK_PID_FILE:-$RUN_DIR/frpdesk.pid}"
+export FRPDESK_LOG_FILE="${FRPDESK_LOG_FILE:-$LOG_DIR/frpdesk-core.log}"
+export FRPDESK_SOCKET="${FRPDESK_SOCKET:-$APP_DIR/app.sock}"
+export FRPDESK_GATEWAY_PREFIX="${FRPDESK_GATEWAY_PREFIX:-/app/frpdesk}"
+export FRPDESK_WEB_DIR="${FRPDESK_WEB_DIR:-$APP_DIR/web}"
+
+SCRIPT_PATH="${FRPDESK_SERVICE_COMMAND:-/var/apps/frpdesk/cmd/main}"
+BOOT_PATH="${FRPDESK_BOOT_COMMAND:-/var/apps/frpdesk/cmd/boot}"
+APP_RUNTIME_USER="${FRPDESK_RUNTIME_USER:-${TRIM_RUN_USERNAME:-${TRIM_USERNAME:-frpdesk}}}"
+RUNTIME_MARKER="${FRPDESK_RUNTIME_MARKER:-/run/frpdesk/supervised}"
+SERVICE_NAME="frpdesk.service"
+SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME"
+
+ensure_runtime_dirs() {
+  mkdir -p "$RUN_DIR" "$LOG_DIR" "$DATA_DIR"
+}
+
+log_msg() {
+  ensure_runtime_dirs
+  printf '%s - %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$LOG_DIR/frpdesk-service.log" 2>/dev/null || true
+}
+
+fail_visible() {
+  local message="$1"
+  log_msg "$message"
+  if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+    printf '%s\n' "$message" > "$TRIM_TEMP_LOGFILE" 2>/dev/null || true
+  fi
+  return 1
+}
+
+
+warn_visible() {
+  local message="$1"
+  log_msg "$message"
+  if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+    printf '%s\n' "$message" >> "$TRIM_TEMP_LOGFILE" 2>/dev/null || true
+  fi
+}
+
+write_autostart_desired() {
+  ensure_runtime_dirs
+  printf '{"enabled":%s}\n' "$1" > "$DATA_DIR/fnos-autostart.json"
+}
+
+write_autostart_helper() {
+  ensure_runtime_dirs
+  cat > "$VAR_DIR/install-frpdesk-autostart.sh" <<HELPER
+#!/usr/bin/env bash
+set -euo pipefail
+cat > "$SERVICE_FILE" <<SERVICE
+[Unit]
+Description=FrpDesk fnOS background service
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=$APP_RUNTIME_USER
+WorkingDirectory=$APP_DIR
+RuntimeDirectory=frpdesk
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=restart
+Environment="FRPDESK_APP_DIR=$APP_DIR"
+Environment="FRPDESK_VAR_DIR=$VAR_DIR"
+Environment="TRIM_APPDEST=$APP_DIR"
+Environment="TRIM_PKGVAR=$VAR_DIR"
+Environment="FRPDESK_DATA_DIR=$VAR_DIR/data"
+Environment="FRPDESK_PID_FILE=$VAR_DIR/run/frpdesk.pid"
+Environment="FRPDESK_LOG_FILE=$VAR_DIR/log/frpdesk-core.log"
+Environment="FRPDESK_SOCKET=$APP_DIR/app.sock"
+Environment="FRPDESK_WEB_DIR=$APP_DIR/web"
+Environment="FRPDESK_FRPC_PATH=$APP_DIR/resources/frpc/linux/frpc"
+Environment="FRPDESK_RUNTIME_MARKER=$RUNTIME_MARKER"
+ExecCondition=$BOOT_PATH
+ExecStart=$APP_DIR/scripts/start.sh --foreground
+ExecStop=/usr/bin/rm -f $RUNTIME_MARKER
+KillMode=control-group
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+chmod 0644 "$SERVICE_FILE"
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME"
+systemctl start "$SERVICE_NAME" || true
+HELPER
+  chmod +x "$VAR_DIR/install-frpdesk-autostart.sh" 2>/dev/null || true
+}
+
+systemd_available() {
+  [ "$(id -u)" -eq 0 ] && command -v systemctl >/dev/null 2>&1 && [ -d /etc/systemd/system ]
+}
+
+install_autostart() {
+  ensure_runtime_dirs
+  if [ ! -f "$DATA_DIR/fnos-autostart.json" ]; then
+    write_autostart_desired true
+  fi
+  if ! systemd_available; then
+    warn_visible "FrpDesk skipped boot autostart registration: systemctl is unavailable"
+    write_autostart_helper || true
+    return 0
+  fi
+
+  if ! cat > "$SERVICE_FILE" <<SERVICE
+[Unit]
+Description=FrpDesk fnOS background service
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=$APP_RUNTIME_USER
+WorkingDirectory=$APP_DIR
+RuntimeDirectory=frpdesk
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=restart
+Environment="FRPDESK_APP_DIR=$APP_DIR"
+Environment="FRPDESK_VAR_DIR=$VAR_DIR"
+Environment="TRIM_APPDEST=$APP_DIR"
+Environment="TRIM_PKGVAR=$VAR_DIR"
+Environment="FRPDESK_DATA_DIR=$VAR_DIR/data"
+Environment="FRPDESK_PID_FILE=$VAR_DIR/run/frpdesk.pid"
+Environment="FRPDESK_LOG_FILE=$VAR_DIR/log/frpdesk-core.log"
+Environment="FRPDESK_SOCKET=$APP_DIR/app.sock"
+Environment="FRPDESK_WEB_DIR=$APP_DIR/web"
+Environment="FRPDESK_FRPC_PATH=$APP_DIR/resources/frpc/linux/frpc"
+Environment="FRPDESK_RUNTIME_MARKER=$RUNTIME_MARKER"
+ExecCondition=$BOOT_PATH
+ExecStart=$APP_DIR/scripts/start.sh --foreground
+ExecStop=/usr/bin/rm -f $RUNTIME_MARKER
+KillMode=control-group
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+  then
+    warn_visible "FrpDesk skipped boot autostart registration: cannot write $SERVICE_FILE"
+    write_autostart_helper || true
+    return 0
+  fi
+
+  if ! chmod 0644 "$SERVICE_FILE"; then
+    warn_visible "FrpDesk skipped boot autostart registration: cannot chmod $SERVICE_FILE"
+    write_autostart_helper || true
+    return 0
+  fi
+  if ! systemctl daemon-reload; then
+    warn_visible "FrpDesk skipped boot autostart registration: systemd daemon-reload failed"
+    write_autostart_helper || true
+    return 0
+  fi
+  if ! systemctl enable "$SERVICE_NAME"; then
+    warn_visible "FrpDesk skipped boot autostart registration: cannot enable $SERVICE_NAME"
+    write_autostart_helper || true
+    return 0
+  fi
+  log_msg "Registered boot autostart service $SERVICE_NAME"
+}
+
+remove_autostart() {
+  write_autostart_desired false
+  rm -f "$RUNTIME_MARKER"
+  if ! systemd_available; then
+    return 0
+  fi
+  systemctl disable "$SERVICE_NAME" >/dev/null 2>&1 || true
+  rm -f "$SERVICE_FILE"
+  systemctl daemon-reload || true
+  log_msg "Removed boot autostart service $SERVICE_NAME"
+}

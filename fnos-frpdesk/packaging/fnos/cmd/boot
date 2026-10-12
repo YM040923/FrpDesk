@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VAR_DIR="${FRPDESK_VAR_DIR:-${TRIM_PKGVAR:-/var/apps/frpdesk/var}}"
+STATE_FILE="$VAR_DIR/data/fnos-autostart.json"
+RUNTIME_MARKER="${FRPDESK_RUNTIME_MARKER:-/run/frpdesk/supervised}"
+if [ ! -f "$STATE_FILE" ]; then
+  exit 0
+fi
+if grep -q '"enabled"[[:space:]]*:[[:space:]]*true' "$STATE_FILE"; then
+  exit 0
+fi
+if grep -q '"enabled"[[:space:]]*:[[:space:]]*false' "$STATE_FILE"; then
+  if [ -f "$RUNTIME_MARKER" ]; then
+    exit 0
+  fi
+  echo "FrpDesk boot autostart is disabled"
+  exit 1
+fi
+echo "Invalid FrpDesk autostart setting: $STATE_FILE" >&2
+exit 2

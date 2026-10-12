@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "FrpDesk upgrade init"
+"$(dirname "${BASH_SOURCE[0]}")/main" stop || true
+
+

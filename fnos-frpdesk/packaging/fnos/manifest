@@ -1,0 +1,12 @@
+appname               = frpdesk
+version               = __VERSION__
+display_name          = FrpDesk
+desc                  = 当前 FrpDesk 的飞牛原生版，支持 TOML、多实例、日志、自恢复和穿透地址
+arch                  = x86_64
+platform              = x86
+source                = thirdparty
+maintainer            = YM040923
+distributor           = YM040923
+desktop_uidir         = ui
+desktop_applaunchname = frpdesk.Application
+checkport             = false

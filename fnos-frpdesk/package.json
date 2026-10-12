@@ -1,0 +1,6 @@
+{
+  "name": "frpdesk-fnos",
+  "version": "0.1.13",
+  "private": true,
+  "description": "FrpDesk native fnOS edition for x86_64"
+}

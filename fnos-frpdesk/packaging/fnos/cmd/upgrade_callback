@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# shellcheck source=common
+source "$(dirname "${BASH_SOURCE[0]}")/common"
+ensure_runtime_dirs
+
+"$(dirname "${BASH_SOURCE[0]}")/main" install-autostart
+"$(dirname "${BASH_SOURCE[0]}")/main" start || true
+
+echo "FrpDesk upgrade callback"
