@@ -1,0 +1,22 @@
+bin/
+obj/
+publish/
+artifacts/
+.vs/
+*.user
+*.suo
+
+# Local UI captures and temporary verification helpers
+/*.png
+/*.bmp
+/.capture-min.py
+/.verify-address.py
+/quality-gate.md
+
+# Other platform and historical workspace copies are managed separately
+/fnos/
+/fnos-frpdesk/
+
+# Downloaded FRP runtime is restored by scripts/Fetch-Frpc.ps1
+/assets/frpc.exe
+/assets/frp-LICENSE
