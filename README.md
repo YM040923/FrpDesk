@@ -18,6 +18,13 @@ FrpDesk 是一款管理 FRP 客户端与 TOML 配置的工具，包含 **Windows
 - Windows 桌面版：`0.1.1`。
 - 飞牛原生版：`0.1.13`，版本号定义在 [`fnos-frpdesk/package.json`](fnos-frpdesk/package.json)。
 
+## 下载
+
+- [Windows x64 安装包 0.1.1](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.1/FrpDesk-0.1.1-win-x64.zip) · [SHA-256](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.1/FrpDesk-0.1.1-win-x64.zip.sha256)
+- [飞牛 x86_64 安装包 0.1.13](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk) · [SHA-256](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk.sha256)
+
+飞牛 FPK 已通过本地结构检查；本轮没有复验 NAS 应用中心的原位升级和数据保留。
+
 ## 构建入口
 
 - Windows：按 [Windows 构建说明](README-WINDOWS.md)运行 `scripts/Fetch-Frpc.ps1` 和发布脚本。
