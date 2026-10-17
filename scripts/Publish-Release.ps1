@@ -65,5 +65,24 @@ Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zipPath -C
 $zipHash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
 "$zipHash  $([IO.Path]::GetFileName($zipPath))" | Set-Content $hashPath -Encoding ascii
 
+$issPath = Join-Path $PSScriptRoot "FrpDesk.iss"
+if (Test-Path $issPath) {
+    $issText = Get-Content $issPath -Raw
+    $issText = $issText -replace '#define AppVersion "[^"]*"', ('#define AppVersion "' + $Version + '"')
+    Set-Content $issPath $issText -Encoding utf8 -NoNewline
+    $iscc = Get-ChildItem "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe", "C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($iscc) {
+        & $iscc.FullName $issPath | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "Inno Setup 编译失败，退出码：$LASTEXITCODE" }
+        $setupPath = Join-Path $artifactRoot "FrpDesk-$Version-win-x64-setup.exe"
+        $setupHash = (Get-FileHash $setupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$setupHash  $([IO.Path]::GetFileName($setupPath))" | Set-Content "$setupPath.sha256" -Encoding ascii
+        Write-Host "Installer: $setupPath"
+        Write-Host "SHA256: $setupHash"
+    } else {
+        Write-Host "未找到 Inno Setup，已跳过安装包。"
+    }
+}
+
 Write-Host "Release package: $zipPath"
 Write-Host "SHA256: $zipHash"

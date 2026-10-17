@@ -40,6 +40,6 @@ Create the versioned Windows x64 package with:
 ./scripts/Publish-Release.ps1 -Version 0.1.1
 ```
 
-The package is written to `artifacts/` as a self-contained ZIP plus a SHA256 file. Extract it and run `Install-FrpDesk.cmd` for a per-user installation. Uninstalling preserves profiles and logs under `%LOCALAPPDATA%\FrpDesk`; the uninstaller only removes the registered FrpDesk installation directory. Close FrpDesk and every configured background service before uninstalling. Uninstalling also removes the auto-start Run entry. Profiles and logs are kept.
+The script writes a self-contained ZIP plus a SHA256 file, and a single-file `FrpDesk-<version>-win-x64-setup.exe` installer plus its SHA256 file. Double-click the setup file to install; it needs no administrator rights and installs for the current user. The ZIP is the fallback: extract it and run `Install-FrpDesk.cmd`. Uninstalling preserves profiles and logs under `%LOCALAPPDATA%\FrpDesk`. Close FrpDesk and every configured background service before uninstalling. Uninstalling also removes the auto-start Run entry.
 
 When upgrading, close FrpDesk and turn off every configured background service first. The installer verifies the release manifest and stops if an old service could otherwise keep using the previous installation.
