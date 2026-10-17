@@ -34,6 +34,10 @@ if ($serviceNames.Count -gt 0) {
 
 $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\FrpDesk.lnk"
 if (Test-Path $shortcut) { Remove-Item $shortcut -Force }
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+if (Test-Path $runKey) {
+    Remove-ItemProperty -Path $runKey -Name "FrpDesk" -ErrorAction SilentlyContinue
+}
 if (Test-Path $resolvedInstallRoot) { Remove-Item $resolvedInstallRoot -Recurse -Force }
 if (Test-Path $uninstallKey) { Remove-Item $uninstallKey -Recurse -Force }
-Write-Host "FrpDesk 已卸载。用户配置和日志保留在 %LOCALAPPDATA%\FrpDesk。"
+Write-Host "FrpDesk 已卸载，开机启动项已移除。用户配置和日志保留在 %LOCALAPPDATA%\FrpDesk。"

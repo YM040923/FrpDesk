@@ -19,7 +19,21 @@ public partial class App : Application
             return;
         }
 
+        // A version update moves the executable, so rewrite the Run key before the UI opens.
+        try
+        {
+            var settings = new Services.AppSettingsStore().Load();
+            if (settings.AutoStart) Services.StartupRegistration.Apply(true);
+        }
+        catch
+        {
+            // Auto-start is optional; a failed Run key write must not block startup.
+        }
+
+        var startMinimized = Services.StartupRegistration.ShouldStartMinimized(e.Args);
         base.OnStartup(e);
-        new MainWindow().Show();
+        var window = new MainWindow();
+        if (startMinimized) window.WindowState = WindowState.Minimized;
+        window.Show();
     }
 }

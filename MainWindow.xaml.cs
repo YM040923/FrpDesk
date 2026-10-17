@@ -380,6 +380,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         CloseToTrayToggle.IsChecked = _settings.CloseToTray;
         RestoreLayoutToggle.IsChecked = _settings.RestoreWindowLayout;
+        AutoStartToggle.IsChecked = StartupRegistration.IsEnabled();
         LogLimitBox.SelectedValue = _settings.LogLineLimit.ToString();
         DataPathBox.Text = _settingsStore.RootDirectory;
         SettingsStatusText.Text = string.Empty;
@@ -529,13 +530,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             CloseToTray = CloseToTrayToggle.IsChecked == true,
             RestoreWindowLayout = RestoreLayoutToggle.IsChecked == true,
-            LogLineLimit = int.TryParse(LogLimitBox.SelectedValue as string, out var limit) ? limit : 400
+            LogLineLimit = int.TryParse(LogLimitBox.SelectedValue as string, out var limit) ? limit : 400,
+            AutoStart = AutoStartToggle.IsChecked == true
         };
 
         try
         {
             _settingsStore.Save(settings);
             _settings = settings;
+            StartupRegistration.Apply(_settings.AutoStart);
+            // Reflect the real Run key state, in case Windows refused the write.
+            AutoStartToggle.IsChecked = StartupRegistration.IsEnabled();
             foreach (var profile in Profiles) profile.SetLogLineLimit(_settings.LogLineLimit);
             RefreshLogText(SelectedProfile);
             SettingsStatusText.Text = "设置已保存";
