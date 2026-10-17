@@ -9,7 +9,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <AssemblyName>FrpDesk</AssemblyName>
     <RootNamespace>FrpDesk</RootNamespace>
-    <VersionPrefix>0.1.1</VersionPrefix>
+    <VersionPrefix>0.1.2</VersionPrefix>
     <Product>FrpDesk</Product>
     <Authors>FrpDesk</Authors>
     <Description>Windows desktop manager for multiple independent FRP client instances.</Description>
