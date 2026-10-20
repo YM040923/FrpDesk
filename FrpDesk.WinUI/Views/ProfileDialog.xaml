@@ -1,0 +1,94 @@
+<ContentDialog
+    x:Class="FrpDesk.Views.ProfileDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="{Binding WindowHeading}"
+    PrimaryButtonText="保存配置"
+    CloseButtonText="取消"
+    DefaultButton="Primary"
+    PrimaryButtonClick="Save_Click"
+    Closing="Dialog_Closing">
+    <ContentDialog.KeyboardAccelerators>
+        <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="Save_KeyboardAcceleratorInvoked" />
+        <KeyboardAccelerator Key="Escape" Invoked="Close_KeyboardAcceleratorInvoked" />
+    </ContentDialog.KeyboardAccelerators>
+    <Grid MinWidth="520" MaxWidth="780" MinHeight="420">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="{Binding WindowHeading}" FontFamily="Bahnschrift" FontSize="24"
+                       FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+            <TextBlock Text="粘贴 frpc TOML 配置，保存后可单独启动此实例。"
+                       FontSize="12" Foreground="{StaticResource MutedBrush}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,18,0,12" Spacing="6">
+            <TextBlock Text="实例名称" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+            <TextBox x:Name="NameBox" Style="{StaticResource TextInput}" />
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid Margin="0,0,0,8">
+                <TextBlock Text="TOML 配置" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                    <Button x:Name="ValidateButton" Content="检查配置" Style="{StaticResource QuietButton}"
+                            Padding="10,5" MinHeight="32" Click="Validate_Click" />
+                    <Button Content="清空" Style="{StaticResource QuietButton}"
+                            Padding="10,5" MinHeight="32" Click="Clear_Click" />
+                    <Button Content="从文件导入" Style="{StaticResource QuietButton}"
+                            Padding="10,5" MinHeight="32" Click="Import_Click" />
+                </StackPanel>
+            </Grid>
+            <Border Grid.Row="1" Background="{StaticResource PaperBrush}"
+                    BorderBrush="{StaticResource RuleBrush}" BorderThickness="1"
+                    CornerRadius="4" Padding="2">
+                <TextBox x:Name="ConfigBox" AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto" FontFamily="Cascadia Mono"
+                         FontSize="13" Padding="10" Background="Transparent"
+                         BorderThickness="0" Foreground="{StaticResource InkBrush}"
+                         TextChanged="ConfigBox_TextChanged" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,14,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock x:Name="ConfigStatsText" Foreground="{StaticResource MutedBrush}"
+                           FontSize="11" />
+                <TextBlock x:Name="ErrorText" Foreground="{StaticResource AlertBrush}"
+                           FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+            <Border x:Name="ActionPanel" Grid.Row="1" Background="{StaticResource WarningSoftBrush}"
+                    Padding="10" Margin="0,10,0,0" Visibility="Collapsed">
+                <Grid>
+                    <TextBlock x:Name="ActionText" TextWrapping="Wrap" FontSize="11"
+                               Foreground="{StaticResource InkBrush}" Margin="0,0,190,0" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                        <Button x:Name="ActionPrimaryButton" Content="保存并关闭"
+                                Style="{StaticResource SignalButton}" Padding="9,5"
+                                MinHeight="30" Click="ActionPrimary_Click" />
+                        <Button x:Name="ActionSecondaryButton" Content="放弃"
+                                Style="{StaticResource QuietButton}" Padding="9,5"
+                                MinHeight="30" Click="ActionSecondary_Click" />
+                        <Button Content="继续编辑" Style="{StaticResource QuietButton}"
+                                Padding="9,5" MinHeight="30" Click="ActionCancel_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentDialog>

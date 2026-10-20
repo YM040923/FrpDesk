@@ -1,5 +1,7 @@
+#ifndef AppVersion
+  #define AppVersion "0.1.4"
+#endif
 #define AppName "FrpDesk"
-#define AppVersion "0.1.2"
 #define AppPublisher "FrpDesk"
 #define AppExeName "FrpDesk.exe"
 
@@ -7,30 +9,36 @@
 AppId={{7E4C9A52-3B1D-4F86-9C0E-FRPDESKWIN01}
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
 VersionInfoVersion={#AppVersion}
 AppPublisher={#AppPublisher}
+AppSupportURL=https://github.com/YM040923/FrpDesk
+AppUpdatesURL=https://github.com/YM040923/FrpDesk/releases
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=no
+AllowNoIcons=yes
 OutputDir=..\artifacts
 OutputBaseFilename=FrpDesk-{#AppVersion}-win-x64-setup
+SetupIconFile=..\assets\FrpDesk.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequired=admin
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\assets\FrpDesk.ico
+AppMutex=Local\FrpDesk-FrpDesk
 CloseApplications=yes
 CloseApplicationsFilter=FrpDesk.exe
 RestartApplications=no
+SetupLogging=yes
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -44,22 +52,59 @@ Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"; IconFilename: "{app}\assets\FrpDesk.ico"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\assets\FrpDesk.ico"; Tasks: desktopicon
 
-[Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "FrpDesk"; ValueData: """{app}\{#AppExeName}"" --minimized"; Tasks: autostart; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk"; ValueType: string; ValueName: "DisplayName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk"; ValueType: string; ValueName: "DisplayVersion"; ValueData: "{#AppVersion}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk"; ValueType: string; ValueName: "Publisher"; ValueData: "{#AppPublisher}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk"; ValueType: string; ValueName: "InstallLocation"; ValueData: "{app}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk"; ValueType: string; ValueName: "DisplayIcon"; ValueData: "{app}\assets\FrpDesk.ico"; Flags: uninsdeletekey
-
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (Get-Process FrpDesk -ErrorAction SilentlyContinue) {{ Stop-Process -Name FrpDesk -Force }}; Get-Service -Name 'FrpDesk-Instance-*' -ErrorAction SilentlyContinue | ForEach-Object {{ sc.exe delete $_.Name }}"""; Flags: runhidden
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Uninstall-Services.ps1"" -InstallRoot ""{app}"""; Flags: runhidden waituntilterminated; RunOnceId: "FrpDeskServices"
 
 [Code]
-function InitializeSetup(): Boolean;
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Names: TArrayOfString;
+  I: Integer;
 begin
-  Result := True;
+  Result := '';
+  if RegGetSubkeyNames(HKLM, 'SYSTEM\CurrentControlSet\Services', Names) then
+  begin
+    for I := 0 to GetArrayLength(Names) - 1 do
+    begin
+      if Pos('FrpDesk-Instance-', Names[I]) = 1 then
+      begin
+        Result := '检测到仍在注册的 FrpDesk 后台服务。请先在 FrpDesk 中关闭所有实例的后台服务，再重新安装。';
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+  LegacyRoot: String;
+  RunValue: String;
+  OldRunValue: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if (not Exec('powershell.exe',
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\Verify-Release.ps1') +
+      '" -PackageRoot "' + ExpandConstant('{app}') + '"',
+      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then
+    begin
+      MsgBox('安装文件校验失败，安装已中止。请重新下载安装包。', mbError, MB_OK);
+      Abort;
+    end;
+
+    LegacyRoot := ExpandConstant('{localappdata}\Programs\FrpDesk');
+    if (not SameText(LegacyRoot, ExpandConstant('{app}'))) and DirExists(LegacyRoot) then
+      DelTree(LegacyRoot, True, True, False);
+
+    DeleteFile(ExpandConstant('{userprograms}\FrpDesk.lnk'));
+    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\FrpDesk');
+    RunValue := '"' + ExpandConstant('{app}\{#AppExeName}') + '" --minimized';
+    if WizardIsTaskSelected('autostart') or
+      RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'FrpDesk', OldRunValue) then
+      RegWriteStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'FrpDesk', RunValue);
+  end;
 end;

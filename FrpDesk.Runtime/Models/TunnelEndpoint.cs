@@ -1,0 +1,51 @@
+namespace FrpDesk.Models;
+
+public sealed class TunnelEndpoint
+{
+    public TunnelEndpoint(string name, string type, string localAddress, string remoteAddress)
+    {
+        Name = name;
+        Type = type;
+        LocalAddress = localAddress;
+        RemoteAddress = remoteAddress;
+    }
+
+    public int Index { get; set; }
+    public string Name { get; }
+    public string Type { get; }
+    public string LocalAddress { get; }
+    public string RemoteAddress { get; }
+    public string LocalHost { get; set; } = "127.0.0.1";
+    public string LocalPortText { get; set; } = "";
+    public string RemotePortText { get; set; } = "";
+    public string PublicPortText { get; set; } = "";
+    public string ServerAddress { get; set; } = "";
+    public string ServerEndpoint { get; set; } = "";
+    public IReadOnlyList<string> CustomDomains { get; set; } = [];
+    public string Subdomain { get; set; } = "";
+    public bool UsesSubdomain { get; set; }
+    public string Note { get; set; } = "";
+    public string RemoteCopyText { get; set; } = "";
+    public string DisplayType => Type.ToUpperInvariant();
+    public string DomainText => UsesSubdomain ? Subdomain : string.Join(Environment.NewLine, CustomDomains);
+    public string CopyActionLabel => Type.Equals("http", StringComparison.OrdinalIgnoreCase)
+        || Type.Equals("https", StringComparison.OrdinalIgnoreCase)
+            ? "复制链接"
+            : "复制地址";
+    public bool SupportsStructuredEditing => Type.Equals("tcp", StringComparison.OrdinalIgnoreCase)
+        || Type.Equals("udp", StringComparison.OrdinalIgnoreCase)
+        || Type.Equals("http", StringComparison.OrdinalIgnoreCase)
+        || Type.Equals("https", StringComparison.OrdinalIgnoreCase);
+    public bool HasCopyableRemoteAddress => !string.IsNullOrWhiteSpace(RemoteCopyText);
+}
+
+public sealed record TunnelEndpointEdit(
+    string Name,
+    string Type,
+    string LocalHost,
+    int LocalPort,
+    int? RemotePort,
+    IReadOnlyList<string> Domains,
+    int? PublicPort,
+    bool UsesSubdomain,
+    string Note);

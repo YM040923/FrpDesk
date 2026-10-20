@@ -12,6 +12,7 @@ artifacts/
 /.capture-min.py
 /.verify-address.py
 /quality-gate.md
+/_codex_winui_smoke/
 
 # The current native fnOS source is in fnos-frpdesk/
 /fnos/

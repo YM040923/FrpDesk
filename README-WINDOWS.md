@@ -1,45 +1,58 @@
-# FrpDesk
+# FrpDesk Windows 桌面版
 
-A small Windows desktop manager for multiple independent `frpc` TOML configurations.
+FrpDesk Windows 版用于在一台电脑上管理多个独立的 `frpc` TOML 配置。当前版本为 `0.1.4`，使用 C#、WinUI 3、Windows App SDK 2.5.1 和 .NET 10。
 
-- Paste or import a TOML file, save it as an instance, then start or stop it independently.
-- Each configuration runs as its own `frpc` process and stores its logs in the app window.
-- The official FRP Windows x64 client is bundled; no separate FRP installation is required.
-- Profiles live under `%LOCALAPPDATA%\FrpDesk\instances\`.
-- Closing the window hides FrpDesk in the system tray; choose “退出 FrpDesk” from the tray menu to stop foreground `frpc` processes.
-- Use “后台运行” for an instance that must survive closing the window, disconnecting RDP, and logging off. FrpDesk registers one Windows service per instance, set to start automatically with Windows; Windows will request administrator approval when the switch is enabled or disabled.
-- The service host runs the bundled `frpc.exe` under a per-instance virtual service account and retries unexpected exits after 30 seconds, 1 minute, 2 minutes, and 4 minutes. After five starts it reports “后台重试耗尽” and waits for the user to turn the switch on again.
-- The app keeps a diagnostic summary for each instance. TOML validation failures, frpc startup failures, unexpected exits, connection/authentication errors, background service failures, and exhausted retries are classified separately, with the latest detail, exit code, time, and suggested next step available in the instance panel and copyable with “复制诊断”.
-- The instance list has a quick run/stop action for each foreground instance. “全部运行” starts all stopped foreground instances together; Windows service instances are skipped and remain managed by their service switch. “全部停止” stops both foreground processes and configured background services.
-- The settings page is a full page inside the main window. It controls close-to-tray behavior, remembered window layout, in-memory log retention, auto-start, and opening the local data directory. It does not duplicate per-instance background service controls.
-- Auto-start adds a per-user Run entry so FrpDesk starts after sign-in and opens minimized to the tray. It needs no administrator rights because the app installs per user. Tunnels that must keep running with nobody signed in are covered by the per-instance Windows services, not by this switch.
-- The address page lets you choose any saved profile and copy each proxy's local address, public TCP/UDP endpoint, HTTP/HTTPS domain, or access-side name for private proxy types. It also supports copying the complete address list for the selected profile.
-- The profile editor can validate the pasted TOML with the bundled `frpc` before saving, shows the current character count, supports import, clear, select-all, and warns before discarding unsaved changes.
-- A running foreground instance can apply a saved configuration with “重载配置”. When the TOML enables an frpc management API, FrpDesk uses `frpc reload`; otherwise it restarts that instance to apply the file. A background-service instance is restarted through its Windows service so it remains independent of the desktop session.
-- Background services are not created automatically for existing profiles. Enable “后台运行” for each profile that should start with Windows.
+## 系统要求
 
-## Build
+- Windows x64；应用最低目标为 Windows 10 版本 1809（build 17763）。
+- 安装包为自包含版本，不要求另外安装 .NET Runtime。
+- Windows 11 可使用 Mica 背景；Acrylic 是否可用取决于 Windows 版本和系统效果设置。
 
-Requires the .NET 10 SDK on Windows:
+## 功能
 
-```powershell
-./scripts/Fetch-Frpc.ps1
-dotnet run
-dotnet publish -c Release -o publish
-```
+- 在运行概览、隧道管理、隧道编辑、运行日志和设置页面之间切换。
+- 导入、创建、编辑和管理多个 TOML 配置；每个配置有独立的隧道列表和运行状态。
+- 查看 `frpc` 输出与连接诊断；复制隧道地址时，HTTP/HTTPS 复制完整 URL，TCP/UDP 复制主机和端口。
+- 以前台进程运行隧道，或按配置启用 Windows 后台服务。后台服务可在用户退出桌面会话后继续运行；启用、关闭和移除服务需要管理员授权。
+- 设置窗口关闭时是否收进系统托盘、是否登录后自动启动、日志保留上限，以及窗口背景材质。
+- 背景材质可选 Mica、Mica Alt、Acrylic 和 Acrylic Thin；选择即时预览并保存在本机。关闭系统透明效果或启用高对比度时，应用回退到纯色背景。材质由 Windows 合成，壁纸、系统版本和效果设置都会影响实际观感；内容面板保持不透明以保证可读性。
 
-`Fetch-Frpc.ps1` downloads official FRP v0.71.0, verifies its published SHA256, and extracts `frpc.exe` and its license into `assets/`. The app is published as a self-contained single-file executable with `assets/frpc.exe` beside it.
+后台服务不会自动为已有配置启用。意外退出时，`frpc` 会按 30 秒、1 分钟、2 分钟和 4 分钟间隔重试；达到上限后需要在应用中重新启用服务。
 
-The FRP project and included client are distributed under their upstream license in [`assets/frp-LICENSE`](assets/frp-LICENSE). FrpDesk is an independent, unofficial client.
+## 安装与数据
 
-## Release
+- **安装程序**：运行 `FrpDesk-0.1.4-win-x64-setup.exe`，按提示安装到 `Program Files`。安装程序需要管理员授权，用于管理 Windows 服务。
+- **便携版**：解压 `FrpDesk-0.1.4-win-x64.zip` 后运行 `FrpDesk.exe`。便携 ZIP 不是安装程序；启用后台服务时仍会请求管理员授权。
+- **升级前**：退出 FrpDesk，并在应用中关闭所有后台服务。若仍有 `FrpDesk-Instance-*` 服务注册，安装程序会停止并提示先处理服务。
+- **卸载**：从 Windows“已安装的应用”卸载。卸载程序只清理 FrpDesk 自有的服务和程序文件；配置、TOML 和本地日志保留在 `%LOCALAPPDATA%\FrpDesk`。
 
-Create the versioned Windows x64 package with:
+配置文件是本地普通文件。若 TOML 中含 FRP Token 或其他凭据，应用不会对其做额外加密；请保护 Windows 用户账户，不要在未检查和脱敏前分享配置或日志。
+
+## 本地构建与测试
+
+需要 Windows、.NET 10 SDK 和 Inno Setup 6（仅生成安装程序时需要）。在仓库根目录运行：
 
 ```powershell
-./scripts/Publish-Release.ps1 -Version 0.1.1
+.\scripts\Fetch-Frpc.ps1
+dotnet restore .\FrpDesk.sln
+dotnet test .\tests\FrpDesk.Tests\FrpDesk.Tests.csproj -c Release --no-restore
+dotnet run --project .\FrpDesk.WinUI\FrpDesk.WinUI.csproj
 ```
 
-The script writes a self-contained ZIP plus a SHA256 file, and a single-file `FrpDesk-<version>-win-x64-setup.exe` installer plus its SHA256 file. Double-click the setup file to install; it needs no administrator rights and installs for the current user. The ZIP is the fallback: extract it and run `Install-FrpDesk.cmd`. Uninstalling preserves profiles and logs under `%LOCALAPPDATA%\FrpDesk`. Close FrpDesk and every configured background service before uninstalling. Uninstalling also removes the auto-start Run entry.
+`Fetch-Frpc.ps1` 下载官方 FRP `0.71.0` Windows x64 压缩包，先校验 SHA-256，再将 `frpc.exe` 和上游许可证放入被 Git 忽略的 `assets/`。发布包会包含这两个文件。
 
-When upgrading, close FrpDesk and turn off every configured background service first. The installer verifies the release manifest and stops if an old service could otherwise keep using the previous installation.
+## 生成发布包
+
+先完成上面的依赖恢复和 FRP 客户端下载，再运行：
+
+```powershell
+.\scripts\Publish-Release.ps1 -Version 0.1.4
+```
+
+脚本在 `artifacts/` 生成自包含应用目录、便携 ZIP、Inno Setup 安装程序及 SHA-256 校验文件。未提供 Authenticode 证书时，应用和安装程序不会签名，Windows SmartScreen 可能显示警告。
+
+## 隐私与许可
+
+FrpDesk 将配置、设置和诊断数据保存在本机 `%LOCALAPPDATA%\FrpDesk`。运行时会启动随包提供的 `frpc.exe`，并按用户配置连接 FRP 服务端。
+
+此仓库目前为私有仓库，FrpDesk 本身尚未声明再分发许可证。随包 FRP 客户端适用 [`assets/frp-LICENSE`](assets/frp-LICENSE)；该上游许可证不覆盖 FrpDesk。

@@ -1,35 +1,21 @@
 # FrpDesk
 
-FrpDesk 是一款管理 FRP 客户端与 TOML 配置的工具，包含 **Windows 桌面版**和**飞牛原生版**。两版使用不同的程序和安装包，源码分别放在各自目录。
+FrpDesk 用于管理多个独立的 FRP 客户端配置。Windows 桌面版与飞牛原生版是两个独立程序，各自构建、安装并保存运行数据。
 
-| 版本 | 源码位置 | 技术与安装包 | 说明 |
+| 版本 | 源码 | 技术栈 | 文档 |
 |---|---|---|---|
-| Windows 桌面版 | 仓库根目录 | C#、WPF、.NET 10；Windows x64 ZIP 安装包 | [Windows 使用、构建与发布说明](README-WINDOWS.md)，[Windows 更新记录](RELEASE_NOTES.md) |
-| 飞牛原生版 | [`fnos-frpdesk/`](fnos-frpdesk/) | Go Core、静态网页界面；飞牛 x86_64 `.fpk` 安装包 | [飞牛版源码与构建说明](fnos-frpdesk/README.md) |
-
-## 源码结构
-
-- 根目录的 `App.xaml`、`MainWindow.xaml`、`Models/`、`Services/`、`Views/` 和 `scripts/` 属于 Windows 桌面版。
-- `fnos-frpdesk/core/`、`web/`、`packaging/`、`resources/` 和 `scripts/` 属于飞牛原生版。
-- 两版都支持多实例和 TOML 配置，但各自独立构建、安装和保存运行数据。
-
-## 版本
-
-- Windows 桌面版：`0.1.1`。
-- 飞牛原生版：`0.1.13`，版本号定义在 [`fnos-frpdesk/package.json`](fnos-frpdesk/package.json)。
+| Windows 桌面版 | `FrpDesk.WinUI/`、`FrpDesk.Runtime/` | C#、WinUI 3、.NET 10 | [使用、构建与发布](README-WINDOWS.md) · [更新记录](RELEASE_NOTES.md) |
+| 飞牛原生版 | [`fnos-frpdesk/`](fnos-frpdesk/) | Go、静态网页 | [飞牛版说明](fnos-frpdesk/README.md) |
 
 ## 下载
 
-- [Windows x64 安装包 0.1.1](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.1/FrpDesk-0.1.1-win-x64.zip) · [SHA-256](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.1/FrpDesk-0.1.1-win-x64.zip.sha256)
-- [飞牛 x86_64 安装包 0.1.13](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk) · [SHA-256](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk.sha256)
+- Windows x64 `0.1.4`：[安装程序](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.4/FrpDesk-0.1.4-win-x64-setup.exe) · [安装程序 SHA-256](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.4/FrpDesk-0.1.4-win-x64-setup.exe.sha256) · [便携版 ZIP](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.4/FrpDesk-0.1.4-win-x64.zip) · [ZIP SHA-256](https://github.com/YM040923/FrpDesk/releases/download/windows-v0.1.4/FrpDesk-0.1.4-win-x64.zip.sha256)
+- 飞牛 x86_64 `0.1.13`：[FPK 安装包](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk) · [SHA-256](https://github.com/YM040923/FrpDesk/releases/download/fnos-v0.1.13/FrpDesk-0.1.13-x86_64.fpk.sha256)
 
-飞牛 FPK 已通过本地结构检查；本轮没有复验 NAS 应用中心的原位升级和数据保留。
+Windows 版的系统要求、安装步骤和本地构建命令见 [Windows 文档](README-WINDOWS.md)。飞牛版的构建与升级说明见 [飞牛文档](fnos-frpdesk/README.md)。
 
-## 构建入口
+## 仓库与许可
 
-- Windows：按 [Windows 构建说明](README-WINDOWS.md)运行 `scripts/Fetch-Frpc.ps1` 和发布脚本。
-- 飞牛：按[飞牛构建说明](fnos-frpdesk/README.md)构建 Core、准备运行目录并生成 `.fpk`。
+此 GitHub 仓库保持私有。FrpDesk 本身尚未声明可供第三方再分发的许可证；请勿将源码或应用包公开转载、修改后分发。Windows 包含的 FRP 客户端遵循 [`assets/frp-LICENSE`](assets/frp-LICENSE) 中的上游许可证，该许可证不代表 FrpDesk 本身采用相同许可证。
 
-Windows 发布压缩包和飞牛 `.fpk` 都是构建产物，不作为源码提交；可在对应的 `artifacts/` 或 `dist/` 目录生成。
-
-FrpDesk 是独立项目，不是 FrpPilot。当前仓库为私有仓库；FrpDesk 自身的再分发许可证尚未声明。
+飞牛 FPK 先前通过本地包结构检查；本轮未重新验证 NAS 应用中心的原位升级和数据保留。
