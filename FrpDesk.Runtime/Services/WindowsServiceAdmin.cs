@@ -3,7 +3,6 @@ using System.IO;
 using System.ServiceProcess;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Win32;
 using TimeoutException = System.TimeoutException;
 
 namespace FrpDesk.Services;
@@ -86,9 +85,7 @@ public static class WindowsServiceAdmin
     {
         RemoveLegacyTask(profileId);
         var serviceName = ServiceName(profileId);
-        var runtimeDirectory = RuntimeDirectory(profileId);
         var instanceDirectory = InstanceDirectory(profileId);
-        var serviceAccount = "NT SERVICE\\" + serviceName;
         var sourceExecutable = Environment.ProcessPath
             ?? throw new InvalidDataException("无法确认服务宿主程序路径。");
         var sourceFrpc = Path.Combine(Path.GetDirectoryName(sourceExecutable)!, "assets", "frpc.exe");
@@ -97,18 +94,14 @@ public static class WindowsServiceAdmin
         if (!Directory.Exists(instanceDirectory))
             throw new DirectoryNotFoundException("找不到实例数据目录。");
 
-        var hostRoot = Path.GetDirectoryName(runtimeDirectory)!;
-        Directory.CreateDirectory(hostRoot);
-        SecureHostRoot(hostRoot);
         if (IsInstalled(serviceName)) StopAndDeleteExisting(serviceName);
-        Directory.CreateDirectory(runtimeDirectory);
-        File.Copy(sourceExecutable, Path.Combine(runtimeDirectory, "FrpDesk.exe"), overwrite: true);
-        File.Copy(sourceFrpc, Path.Combine(runtimeDirectory, "frpc.exe"), overwrite: true);
+        CleanupLegacyPermissions(profileId);
+        DeleteLegacyRuntimeDirectory(profileId);
 
-        var serviceExecutable = Path.Combine(runtimeDirectory, "FrpDesk.exe");
-        var serviceFrpc = Path.Combine(runtimeDirectory, "frpc.exe");
-        var imagePath = $"\"{serviceExecutable}\" --service-run --profile-id {profileId} " +
-            $"--frpc-path \"{serviceFrpc}\" --config-path \"{ConfigPath(profileId)}\" " +
+        // 直接运行安装目录里的完整应用，避免旧版只复制 exe 导致依赖缺失。
+        // Program.Main 会在 WinUI 初始化之前进入服务模式。
+        var imagePath = $"\"{sourceExecutable}\" --service-run --profile-id {profileId} " +
+            $"--frpc-path \"{sourceFrpc}\" --config-path \"{ConfigPath(profileId)}\" " +
             $"--log-path \"{LogPath(profileId)}\" --status-path \"{StatusPath(profileId)}\"";
         RunTool("sc.exe", false, "create", serviceName,
             "binPath=", imagePath,
@@ -118,20 +111,14 @@ public static class WindowsServiceAdmin
 
         try
         {
-            RunTool("sc.exe", false, "sidtype", serviceName, "unrestricted");
-            RunTool("sc.exe", false, "config", serviceName, "obj=", serviceAccount, "password=", "");
-            RunTool("icacls.exe", false, runtimeDirectory, "/grant", $"{serviceAccount}:(OI)(CI)RX");
-            GrantInstanceAccess(profileId, serviceAccount);
             RunTool("sc.exe", false, "failure", serviceName,
                 "reset=", "86400",
                 "actions=", "restart/60000/restart/120000/restart/240000");
             RunTool("sc.exe", false, "failureflag", serviceName, "1");
             RunTool("sc.exe", false, "start", serviceName);
-            PruneServiceHosts(hostRoot);
         }
         catch
         {
-            RemovePermissions(profileId, serviceAccount);
             RunTool("sc.exe", true, "delete", serviceName);
             throw;
         }
@@ -140,7 +127,6 @@ public static class WindowsServiceAdmin
     private static void StopAndRemove(string profileId)
     {
         var serviceName = ServiceName(profileId);
-        var serviceAccount = "NT SERVICE\\" + serviceName;
         if (IsInstalled(serviceName))
         {
             try
@@ -149,23 +135,17 @@ public static class WindowsServiceAdmin
                 if (controller.Status != ServiceControllerStatus.Stopped)
                 {
                     controller.Stop();
-                    controller.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(20));
+                    WaitForStatus(controller, ServiceControllerStatus.Stopped, "停止");
                 }
             }
             catch (InvalidOperationException) { }
 
-            RemovePermissions(profileId, serviceAccount);
             RunTool("sc.exe", true, "delete", serviceName);
             for (var index = 0; index < 20 && IsInstalled(serviceName); index++) Thread.Sleep(250);
         }
         RemoveLegacyTask(profileId);
-        try
-        {
-            var runtimeDirectory = RuntimeDirectory(profileId);
-            if (Directory.Exists(runtimeDirectory) && !IsRuntimeInUse(runtimeDirectory))
-                Directory.Delete(runtimeDirectory, recursive: true);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+        CleanupLegacyPermissions(profileId);
+        DeleteLegacyRuntimeDirectory(profileId);
     }
 
     private static void Restart(string profileId)
@@ -176,10 +156,10 @@ public static class WindowsServiceAdmin
         if (controller.Status != ServiceControllerStatus.Stopped)
         {
             controller.Stop();
-            controller.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(20));
+            WaitForStatus(controller, ServiceControllerStatus.Stopped, "停止");
         }
         controller.Start();
-        controller.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(20));
+        WaitForStatus(controller, ServiceControllerStatus.Running, "启动");
     }
 
     private static void StopAndDeleteExisting(string serviceName)
@@ -190,12 +170,24 @@ public static class WindowsServiceAdmin
             if (controller.Status != ServiceControllerStatus.Stopped)
             {
                 controller.Stop();
-                controller.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(20));
+                WaitForStatus(controller, ServiceControllerStatus.Stopped, "停止");
             }
         }
         catch (InvalidOperationException) { }
         RunTool("sc.exe", false, "delete", serviceName);
         for (var index = 0; index < 20 && IsInstalled(serviceName); index++) Thread.Sleep(250);
+    }
+
+    private static void WaitForStatus(ServiceController controller, ServiceControllerStatus status, string action)
+    {
+        try
+        {
+            controller.WaitForStatus(status, TimeSpan.FromSeconds(20));
+        }
+        catch (TimeoutException)
+        {
+            throw new TimeoutException($"后台服务未能在 20 秒内{action}。");
+        }
     }
 
     private static bool IsInstalled(string serviceName)
@@ -209,31 +201,13 @@ public static class WindowsServiceAdmin
         catch { return false; }
     }
 
-    private static void SecureHostRoot(string hostRoot)
+    private static void CleanupLegacyPermissions(string profileId)
     {
-        Directory.CreateDirectory(hostRoot);
-        RunTool("icacls.exe", false, hostRoot, "/grant",
-            "*S-1-5-18:(OI)(CI)F",
-            "*S-1-5-32-544:(OI)(CI)F",
-            "*S-1-5-32-545:(OI)(CI)RX");
-    }
-
-    private static void GrantInstanceAccess(string profileId, string serviceAccount)
-    {
-        var localRoot = LocalRoot();
-        var instancesRoot = Path.Combine(localRoot, "instances");
-        Directory.CreateDirectory(instancesRoot);
-        RunTool("icacls.exe", false, localRoot, "/grant", $"{serviceAccount}:(X)");
-        RunTool("icacls.exe", false, instancesRoot, "/grant", $"{serviceAccount}:(X)");
-        RunTool("icacls.exe", false, InstanceDirectory(profileId), "/grant", $"{serviceAccount}:(OI)(CI)M", "/T", "/C");
-    }
-
-    private static void RemovePermissions(string profileId, string serviceAccount)
-    {
+        // 旧版用虚拟服务账户运行，升级后清掉残留的授权。
+        var serviceAccount = "NT SERVICE\\" + ServiceName(profileId);
         RunTool("icacls.exe", true, InstanceDirectory(profileId), "/remove", serviceAccount, "/T", "/C");
         RunTool("icacls.exe", true, Path.Combine(LocalRoot(), "instances"), "/remove", serviceAccount);
         RunTool("icacls.exe", true, LocalRoot(), "/remove", serviceAccount);
-        RunTool("icacls.exe", true, RuntimeDirectory(profileId), "/remove", serviceAccount, "/T", "/C");
     }
 
     private static void RemoveLegacyTask(string profileId)
@@ -245,49 +219,28 @@ public static class WindowsServiceAdmin
         try { if (File.Exists(scriptPath)) File.Delete(scriptPath); } catch { }
     }
 
-    private static void PruneServiceHosts(string hostRoot)
-    {
-        foreach (var directory in Directory.GetDirectories(hostRoot))
-        {
-            try
-            {
-                if (IsRuntimeInUse(directory)) continue;
-                var info = new DirectoryInfo(directory);
-                if (info.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-7))
-                    Directory.Delete(directory, recursive: true);
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
-        }
-    }
-
-    private static bool IsRuntimeInUse(string runtimeDirectory)
-    {
-        var fullPath = Path.GetFullPath(runtimeDirectory);
-        foreach (var service in ServiceController.GetServices())
-        {
-            if (!service.ServiceName.StartsWith(ServicePrefix, StringComparison.OrdinalIgnoreCase)) continue;
-            try
-            {
-                using var key = Registry.LocalMachine.OpenSubKey(
-                    $@"SYSTEM\CurrentControlSet\Services\{service.ServiceName}");
-                if (key?.GetValue("ImagePath") is string imagePath
-                    && imagePath.Contains(fullPath, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            catch (Exception exception) when (exception is UnauthorizedAccessException or System.Security.SecurityException) { }
-        }
-        return false;
-    }
-
     private static string LocalRoot() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FrpDesk");
 
     private static string InstanceDirectory(string profileId) =>
         Path.Combine(LocalRoot(), "instances", profileId);
 
-    private static string RuntimeDirectory(string profileId) => Path.Combine(
+    private static string LegacyRuntimeDirectory(string profileId) => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
         "FrpDesk", "ServiceHosts", profileId);
+
+    private static void DeleteLegacyRuntimeDirectory(string profileId)
+    {
+        try
+        {
+            var directory = LegacyRuntimeDirectory(profileId);
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            var parent = Path.GetDirectoryName(directory)!;
+            if (Directory.Exists(parent) && !Directory.EnumerateFileSystemEntries(parent).Any())
+                Directory.Delete(parent);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
+    }
 
     private static string ConfigPath(string profileId) => Path.Combine(InstanceDirectory(profileId), "frpc.toml");
     private static string LogPath(string profileId) => Path.Combine(InstanceDirectory(profileId), "frpc-background.log");

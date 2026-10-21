@@ -1,7 +1,12 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
 namespace FrpDesk.Models;
 
-public sealed class TunnelEndpoint
+public sealed class TunnelEndpoint : INotifyPropertyChanged
 {
+    private TunnelProxyStatus _status;
+
     public TunnelEndpoint(string name, string type, string localAddress, string remoteAddress)
     {
         Name = name;
@@ -9,6 +14,8 @@ public sealed class TunnelEndpoint
         LocalAddress = localAddress;
         RemoteAddress = remoteAddress;
     }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public int Index { get; set; }
     public string Name { get; }
@@ -26,7 +33,25 @@ public sealed class TunnelEndpoint
     public bool UsesSubdomain { get; set; }
     public string Note { get; set; } = "";
     public string RemoteCopyText { get; set; } = "";
+    public TunnelProxyStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (_status == value) return;
+            _status = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StatusText));
+        }
+    }
+
     public string DisplayType => Type.ToUpperInvariant();
+    public string StatusText => Status switch
+    {
+        TunnelProxyStatus.Running => "运行中",
+        TunnelProxyStatus.Failed => "启动异常",
+        _ => "未启动"
+    };
     public string DomainText => UsesSubdomain ? Subdomain : string.Join(Environment.NewLine, CustomDomains);
     public string CopyActionLabel => Type.Equals("http", StringComparison.OrdinalIgnoreCase)
         || Type.Equals("https", StringComparison.OrdinalIgnoreCase)
@@ -37,6 +62,9 @@ public sealed class TunnelEndpoint
         || Type.Equals("http", StringComparison.OrdinalIgnoreCase)
         || Type.Equals("https", StringComparison.OrdinalIgnoreCase);
     public bool HasCopyableRemoteAddress => !string.IsNullOrWhiteSpace(RemoteCopyText);
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
 public sealed record TunnelEndpointEdit(

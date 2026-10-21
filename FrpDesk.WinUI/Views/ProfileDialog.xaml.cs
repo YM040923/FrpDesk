@@ -25,19 +25,19 @@ public sealed partial class ProfileDialog : ContentDialog
         NameBox.Text = profile?.Name ?? string.Empty;
         ConfigBox.Text = profile?.Config ?? string.Empty;
         _initialName = NameBox.Text;
-        _initialConfig = ConfigBox.Text;
+        _initialConfig = ConfigText;
         DataContext = this;
         UpdateConfigStats();
     }
 
     public string WindowHeading { get; }
     public string ProfileName => NameBox.Text.Trim();
-    public string ConfigText => ConfigBox.Text;
+    public string ConfigText => TomlText.NormalizeLineEndings(ConfigBox.Text);
     public bool SaveRequested { get; private set; }
 
     private void ConfigBox_TextChanged(object sender, TextChangedEventArgs e) => UpdateConfigStats();
 
-    private void UpdateConfigStats() => ConfigStatsText.Text = $"{ConfigText.Length:N0} 字符";
+    private void UpdateConfigStats() => ConfigStatsText.Text = $"{ConfigBox.Text.Length:N0} 字符";
 
     private void Import_Click(object sender, RoutedEventArgs e)
     {
@@ -59,7 +59,7 @@ public sealed partial class ProfileDialog : ContentDialog
 
         try
         {
-            ConfigBox.Text = File.ReadAllText(picker.FileName);
+            ConfigBox.Text = TomlText.NormalizeLineEndings(File.ReadAllText(picker.FileName));
             SetStatus("已导入配置文件。", isError: false);
         }
         catch (Exception exception)
@@ -81,7 +81,7 @@ public sealed partial class ProfileDialog : ContentDialog
 
         _isValidating = true;
         ValidateButton.IsEnabled = false;
-        IsPrimaryButtonEnabled = false;
+        SaveProfileButton.IsEnabled = false;
         SetStatus("正在检查配置…", isError: false);
         var tempPath = Path.Combine(Path.GetTempPath(), $"frpdesk-verify-{Guid.NewGuid():N}.toml");
         Process? process = null;
@@ -117,7 +117,7 @@ public sealed partial class ProfileDialog : ContentDialog
         catch (TimeoutException)
         {
             try { if (process is { HasExited: false }) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { }
+            catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException) { }
             SetStatus("配置检查超时。", isError: true);
         }
         catch (Exception exception)
@@ -127,17 +127,23 @@ public sealed partial class ProfileDialog : ContentDialog
         finally
         {
             try { if (File.Exists(tempPath)) File.Delete(tempPath); }
-            catch (IOException) { }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { }
             process?.Dispose();
             _isValidating = false;
             ValidateButton.IsEnabled = true;
-            IsPrimaryButtonEnabled = true;
+            SaveProfileButton.IsEnabled = true;
         }
     }
 
-    private void Save_Click(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+    private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        if (!TrySave()) args.Cancel = true;
+        if (TrySave()) Hide();
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        SaveRequested = false;
+        Hide();
     }
 
     private bool TrySave()
@@ -249,7 +255,7 @@ public sealed partial class ProfileDialog : ContentDialog
 
     private bool IsDirty =>
         !string.Equals(NameBox.Text, _initialName, StringComparison.Ordinal)
-        || !string.Equals(ConfigBox.Text, _initialConfig, StringComparison.Ordinal);
+        || !string.Equals(ConfigText, _initialConfig, StringComparison.Ordinal);
 
     private enum DialogAction
     {

@@ -1,3 +1,76 @@
+# FrpDesk 0.1.8
+
+## Fixes
+
+- 停止服务 no longer reports “No process is associated with this object.” when `frpc` exits at the same moment as the stop request. An exit during stop is treated as a normal stop, while genuine kill failures still surface a readable message.
+- 启用后台服务 now works from the installed application. The Windows service launches the complete installation before WinUI starts, instead of an incomplete executable copy that was missing its runtime dependencies.
+- After a successful administrator operation, the app no longer reads the exit code from an already-disposed process, which could show the same “No process is associated with this object.” error even though the service was installed.
+- Background services now run as LocalSystem from the installed folder. Legacy per-service runtime copies and virtual-account permissions are removed on the next enable or stop.
+- The background service button and per-profile actions are disabled while an administrator prompt or service operation is running, so repeated clicks no longer queue several installs.
+- 全部停止 stops foreground instances and background services independently; a failure in one no longer prevents the other from stopping.
+- Saving a profile or tunnel while an instance is running now reports whether the new configuration was actually applied instead of always claiming success.
+
+---
+
+# FrpDesk 0.1.7
+
+## Windows interface
+
+- Rebuilt the add/edit profile dialog to match the current surface language. The title appears once, the config toolbar and footer buttons fit inside the dialog, and the stray Ctrl+S hint is gone.
+- Added a dedicated 配置管理 page with a table for starting, stopping, editing, and deleting every profile, plus 全部运行 and 全部停止.
+- The profile switcher is now a compact menu that expands from the trigger at the same width. It only switches profiles or opens 添加配置.
+- Moved 启用后台服务 to Settings, bound to the currently selected profile.
+- Removed the 读取状态 and 重新加载 actions, which could not work reliably.
+- Dialog and popup surfaces are opaque, so page content no longer shows through them.
+
+## Fixes
+
+- The installer now closes any old FrpDesk and foreground `frpc.exe` from the installation folder before replacing files. Upgrading with instances still running no longer fails with `DeleteFile failed; code 5. Access is denied`.
+
+---
+
+# FrpDesk 0.1.6
+
+## Fixes
+
+- Fixed the TOML newline error that blocked starting a profile after pasting a configuration. Config text is now normalized to Windows line endings when it is typed, imported, saved, and loaded, so frpc no longer rejects bare-CR input.
+- Fixed the overview card expanding to display the whole configuration. The endpoint parser now splits CR-only configs correctly, so the card shows the server address and tunnel endpoints as intended.
+- Adding an HTTP or HTTPS tunnel now reuses the existing `vhostHTTPPort` / `vhostHTTPSPort` instead of resetting it to 80 / 443.
+- 全部停止 now stops every profile with a single administrator prompt instead of one prompt per profile.
+- Fixed the close flow while instances are still stopping, and surfaced stop failures from the tray instead of failing silently.
+- A background instance now clears its old error message after reconnecting successfully.
+- The auto-start switch no longer reports enabled when the registry points at an old installation path.
+- The profile editor's unsaved-changes check now compares normalized config text.
+
+---
+
+# FrpDesk 0.1.5
+
+## Windows interface
+
+- Reworked the window chrome into one continuous surface with a calmer card hierarchy, consistent spacing, and a compact collapsible navigation rail.
+- Added switchable accent themes for both light and dark schemes. Accent color is limited to selection, switches, and signal states; all surfaces stay on the measured neutral tokens.
+- Flattened table headers, removed row rules, and tightened the tunnel management layout. Sidebar, settings, overview, and log pages share the same surface language.
+- Removed redundant copy from the title bar, overview, and settings.
+- Replaced the WinForms-drawn tray menu with a WinUI popup that uses the same font, row height, hover treatment, and DWM border as the in-app menus. It opens against the taskbar, follows per-monitor DPI, and closes on outside click or Escape.
+- Simplified tray actions to 打开主界面, 全部停止, and 退出; 全部停止 stays disabled when nothing is running.
+- Updated the update check to read the public GitHub release list and prefer `windows-v*` tags.
+
+## Reliability
+
+- Tunnel status updates now happen in place, and the three-second background poll only rebuilds lists when the profile or configuration actually changes.
+- Recent activity and log views re-render only when their content changes, so the tables and logs no longer flicker or jump to the bottom during polling.
+- Theme and high-contrast changes are applied to the tray menu without restarting the app.
+
+## Package
+
+- Windows x64, self-contained WinUI 3 application directory, includes `assets\frpc.exe`.
+- The setup installs to `Program Files`; administrator authorization is required for service management.
+- The installer and executables are unsigned unless release signing is explicitly configured; SmartScreen may warn.
+- User data stays in `%LOCALAPPDATA%\FrpDesk` across upgrades and uninstall.
+
+---
+
 # FrpDesk 0.1.4
 
 This Windows release also includes the fixes from the earlier 0.1.3 development iteration, which was not published separately.

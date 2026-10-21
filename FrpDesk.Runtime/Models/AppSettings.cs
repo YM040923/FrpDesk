@@ -7,6 +7,8 @@ public sealed class AppSettings
     public bool AutoStart { get; set; }
     public int LogLineLimit { get; set; } = 400;
     public string BackdropMaterial { get; set; } = "Mica";
+    public string Theme { get; set; } = "ink";
+    public string RailMode { get; set; } = "wide";
 
     public AppSettings Clone() => new()
     {
@@ -14,6 +16,8 @@ public sealed class AppSettings
         RestoreWindowLayout = RestoreWindowLayout,
         AutoStart = AutoStart,
         LogLineLimit = LogLineLimit,
-        BackdropMaterial = BackdropMaterial
+        BackdropMaterial = BackdropMaterial,
+        Theme = Theme,
+        RailMode = RailMode
     };
 }

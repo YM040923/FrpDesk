@@ -1,44 +1,76 @@
-<Application
+﻿<Application
     x:Class="FrpDesk.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Microsoft.UI.Xaml.Controls">
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:local="using:FrpDesk">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <controls:XamlControlsResources />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="SystemAccentColor">#3159C9</Color>
-            <SolidColorBrush x:Key="CanvasBrush" Color="#F4F7FB" />
-            <SolidColorBrush x:Key="CanvasBackdropBrush" Color="#CCF4F7FB" />
-            <SolidColorBrush x:Key="PaperBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="SoftBrush" Color="#F9FBFD" />
-            <SolidColorBrush x:Key="AddressChipBrush" Color="#E1E5EA" />
-            <SolidColorBrush x:Key="LogSurfaceBrush" Color="#FAFDFF" />
+            <local:ProxyStatusBrushConverter x:Key="ProxyStatusBrush" />
+
+            <!-- 表面令牌：数值来自对参照应用的逐像素测量（截图 2x，已换算逻辑像素）。
+                 chrome = 顶栏 + 侧栏一整片，不画任何分界线；主体是一张带自己边缘的卡，四周只留 5。
+                 每个表面令牌都有两种态：材质开启（半透明，让窗口底层透出来）和回退态（不透明），
+                 由 MainWindow.ApplySurfaceMode 在运行时改 Color，XAML 里一律用 StaticResource 引用。
+                 这里写的是浅色值；深色对应值和切换逻辑集中在 ThemeScheme，别在 XAML 里再抄一份。 -->
+            <Color x:Key="SystemAccentColor">#FF23282E</Color>
+
+            <!-- chrome：实测 #F6F6F6；材质开启时 RootGrid 不铺色，chrome 就是那层裸材质 -->
+            <SolidColorBrush x:Key="CanvasBrush" Color="#FFF6F6F6" />
+            <!-- 主体卡：实测 #FFFFFF + 1px #E6E6E6 + 圆角 10；材质态 59% -->
+            <SolidColorBrush x:Key="ContentCardBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="ContentCardBackdropBrush" Color="#96FFFFFF" />
+            <CornerRadius x:Key="ContentCardCornerRadius">10</CornerRadius>
+            <Thickness x:Key="ChromeGutter">5,4,5,5</Thickness>
+            <!-- 卡内子卡：卡片层不透明度定在 75% -->
+            <SolidColorBrush x:Key="PaperBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="PaperBackdropBrush" Color="#BFFFFFFF" />
+            <!-- 浮层（对话框、弹出菜单）必须始终不透明：它们下方是任意内容，透出来会显脏 -->
+            <SolidColorBrush x:Key="FloatingSurfaceBrush" Color="#FFFFFFFF" />
+            <!-- 中性浅灰，不带蓝相：和 #F6F6F6 的 chrome 放在一起不会显脏 -->
+            <SolidColorBrush x:Key="SoftBrush" Color="#FFF2F3F4" />
+            <SolidColorBrush x:Key="SoftBackdropBrush" Color="#BFF2F3F4" />
+            <!-- 侧栏选中项：实测 #E5E5E5 扁圆角面，圆角 6，高 31，没有任何点缀色条 -->
+            <SolidColorBrush x:Key="SelectionPillBrush" Color="#FFE5E5E5" />
+            <SolidColorBrush x:Key="SelectionPillBackdropBrush" Color="#140A1420" />
+            <!-- 表格选中行比侧栏更轻，避免整块灰压在白卡上 -->
+            <SolidColorBrush x:Key="TableSelectionBrush" Color="#FFEDEEEF" />
+            <CornerRadius x:Key="NavPillCornerRadius">6</CornerRadius>
+            <x:Double x:Key="NavPillMinHeight">36</x:Double>
+
+            <SolidColorBrush x:Key="LogSurfaceBrush" Color="#00FAFDFF" />
             <SolidColorBrush x:Key="LogWarningRowBrush" Color="#FFFDF9" />
             <SolidColorBrush x:Key="LogErrorRowBrush" Color="#FFFAFA" />
-            <SolidColorBrush x:Key="InkBrush" Color="#17283A" />
-            <SolidColorBrush x:Key="InkSoftBrush" Color="#365066" />
-            <SolidColorBrush x:Key="MutedBrush" Color="#586A7A" />
-            <SolidColorBrush x:Key="RuleBrush" Color="#DCE4EC" />
-            <SolidColorBrush x:Key="ControlBorderBrush" Color="#7D90A4" />
-            <SolidColorBrush x:Key="SelectionBorderBrush" Color="#B1C4D6" />
-            <SolidColorBrush x:Key="ServiceBorderBrush" Color="#CBDaf0" />
-            <SolidColorBrush x:Key="SignalBrush" Color="#3159C9" />
-            <SolidColorBrush x:Key="SignalDeepBrush" Color="#2347A8" />
-            <SolidColorBrush x:Key="SignalSoftBrush" Color="#E5ECFF" />
-            <SolidColorBrush x:Key="SignalWashBrush" Color="#F1F5FF" />
-            <SolidColorBrush x:Key="SignalInkBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#3159C9" />
-            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#2A50B7" />
-            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#2347A8" />
-            <SolidColorBrush x:Key="AlertBrush" Color="#A33C3C" />
-            <SolidColorBrush x:Key="AlertSoftBrush" Color="#F8EAEA" />
-            <SolidColorBrush x:Key="WarningBrush" Color="#805914" />
-            <SolidColorBrush x:Key="WarningSoftBrush" Color="#F6EFDF" />
-            <SolidColorBrush x:Key="SuccessBrush" Color="#1C704D" />
-            <SolidColorBrush x:Key="SuccessSoftBrush" Color="#E7F2EB" />
+            <SolidColorBrush x:Key="InkBrush" Color="#FF17283A" />
+            <SolidColorBrush x:Key="InkSoftBrush" Color="#FF365066" />
+            <SolidColorBrush x:Key="MutedBrush" Color="#FF586A7A" />
+            <!-- 实测轮廓：#E6E6E6，比表面暗，只用于描边，绝不当分界线画 -->
+            <SolidColorBrush x:Key="RuleBrush" Color="#FFE6E6E6" />
+            <SolidColorBrush x:Key="ControlBorderBrush" Color="#FF7D90A4" />
+            <SolidColorBrush x:Key="SelectionBorderBrush" Color="#FFB1C4D6" />
+            <!-- 开关：关态轨道是比 chrome 深一档的中性面，拇指始终是亮面 -->
+            <SolidColorBrush x:Key="SwitchTrackOffBrush" Color="#FFDDE2E8" />
+            <SolidColorBrush x:Key="SwitchThumbBrush" Color="#FFFFFFFF" />
+
+            <!-- 点缀色：石墨黑主题，运行时由 ThemePalette 整套替换 -->
+            <SolidColorBrush x:Key="SignalBrush" Color="#FF23282E" />
+            <SolidColorBrush x:Key="SignalDeepBrush" Color="#FF1A1E23" />
+            <SolidColorBrush x:Key="SignalSoftBrush" Color="#FFEDEFF2" />
+            <SolidColorBrush x:Key="SignalWashBrush" Color="#FFF5F6F7" />
+            <SolidColorBrush x:Key="SignalInkBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF23282E" />
+            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#FF1A1E23" />
+            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#FF39424C" />
+            <SolidColorBrush x:Key="AlertBrush" Color="#FFA33C3C" />
+            <SolidColorBrush x:Key="AlertSoftBrush" Color="#FFF8EAEA" />
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF805914" />
+            <SolidColorBrush x:Key="WarningSoftBrush" Color="#FFF6EFDF" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#FF1C704D" />
+            <SolidColorBrush x:Key="SuccessSoftBrush" Color="#FFE7F2EB" />
 
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
@@ -46,9 +78,10 @@
                 <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
             </Style>
 
+            <!-- 次级按钮：白卡上用 Soft 底而不是白底，否则和卡面同色，看着像禁用 -->
             <Style x:Key="QuietButton" TargetType="Button">
-                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+                <Setter Property="Background" Value="{StaticResource SoftBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="9" />
@@ -56,69 +89,370 @@
                 <Setter Property="MinHeight" Value="40" />
                 <Setter Property="FontSize" Value="15" />
             </Style>
+            <!-- 主按钮自带模板：默认模板的 Disabled 态会把文字换成深灰，
+                 落在深色底上就是"黑底黑字"，所以这里自己接管状态，禁用只降透明度。 -->
             <Style x:Key="SignalButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-                <Setter Property="Background" Value="{StaticResource SignalBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource SignalInkBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource SignalBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Surface" Background="{StaticResource SignalBrush}"
+                                    BorderBrush="{StaticResource SignalBrush}" BorderThickness="1"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Background" Value="{StaticResource SignalDeepBrush}" />
+                                                <Setter Target="Surface.BorderBrush" Value="{StaticResource SignalDeepBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Background" Value="{StaticResource SignalDeepBrush}" />
+                                                <Setter Target="Surface.Opacity" Value="0.82" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Opacity" Value="0.32" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Foreground="{TemplateBinding Foreground}" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
+            <!-- 导航项：整行等宽，选中就是一根铺满侧栏的扁条；展开态和选中态只有填充差 -->
             <Style x:Key="NavigationButton" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Padding" Value="10,8" />
-                <Setter Property="MinHeight" Value="43" />
-                <Setter Property="FontSize" Value="16" />
+                <Setter Property="CornerRadius" Value="{StaticResource NavPillCornerRadius}" />
+                <Setter Property="Padding" Value="10,5" />
+                <Setter Property="MinHeight" Value="{StaticResource NavPillMinHeight}" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
                 <Setter Property="HorizontalContentAlignment" Value="Left" />
             </Style>
+            <!-- SymbolIcon 一旦给死宽高就会切掉字形四边，这里只留占位宽度，尺寸交给字形自己 -->
             <Style x:Key="NavigationIcon" TargetType="SymbolIcon">
-                <Setter Property="Width" Value="20" />
-                <Setter Property="Height" Value="20" />
+                <Setter Property="MinWidth" Value="20" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
             </Style>
             <Style x:Key="NavigationActiveButton" TargetType="Button" BasedOn="{StaticResource NavigationButton}">
-                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource SignalDeepBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource SelectionBorderBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{StaticResource SelectionPillBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Style>
-            <Style x:Key="CopyButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-                <Setter Property="Background" Value="{StaticResource SignalWashBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource SignalDeepBrush}" />
-                <Setter Property="Padding" Value="10,5" />
-                <Setter Property="MinHeight" Value="38" />
-                <Setter Property="FontSize" Value="14" />
-            </Style>
-            <Style x:Key="ProfileSelectorButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource SelectionBorderBrush}" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="9,10" />
-                <Setter Property="MinHeight" Value="68" />
-                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            </Style>
-            <Style x:Key="AddressChipButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
-                <Setter Property="Background" Value="{StaticResource AddressChipBrush}" />
+            <!-- 主题选择：一行四个色块，选中只靠描边和底色区分 -->
+            <Style x:Key="ThemeChoiceButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AddressChipBrush}" />
-                <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Padding" Value="7,3" />
-                <Setter Property="MinHeight" Value="30" />
-                <Setter Property="FontSize" Value="14" />
-            </Style>
-            <Style x:Key="TextInput" TargetType="TextBox">
-                <Setter Property="Background" Value="{StaticResource SoftBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Padding" Value="12,8" />
+                <Setter Property="Padding" Value="10,6" />
+                <Setter Property="MinHeight" Value="34" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+            <Style x:Key="CopyButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+                <Setter Property="Padding" Value="6" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="MinWidth" Value="30" />
+                <Setter Property="FontSize" Value="15" />
+            </Style>
+            <!-- 配置选择：和导航项同一种扁条，不再套一层白卡 + 图标方块 -->
+            <Style x:Key="ProfileSelectorButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="9,8" />
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+            <!-- 配置切换弹层：宽度由代码对齐触发按钮，行只留 hover 和选中反馈 -->
+            <Style x:Key="ProfileMenuRow" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="9,8" />
+                <Setter Property="MinHeight" Value="36" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Surface" Background="{TemplateBinding Background}"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Background" Value="{StaticResource SoftBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Background" Value="{StaticResource SelectionPillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="Surface.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="Center"
+                                                  Foreground="{TemplateBinding Foreground}" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="ProfileMenuPresenter" TargetType="FlyoutPresenter">
+                <Setter Property="Padding" Value="4" />
+                <Setter Property="Background" Value="{StaticResource FloatingSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MaxWidth" Value="10000" />
+            </Style>
+            <Style x:Key="TextInput" TargetType="TextBox">
+                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="12,9" />
                 <Setter Property="MinHeight" Value="42" />
+                <Setter Property="FontSize" Value="15" />
+            </Style>
+
+            <!-- 排版与结构件：数值取自 v7 定稿（band 16/600、行 14px 20px + 18 gap、行分隔 #E6E6E6）。
+                 每个带 Foreground 的样式都必须写死：显式 Style 会顶掉隐式 TextBlock 样式，
+                 漏写就会去跟系统主题取默认字色，深浅色下和令牌错位。 -->
+            <Style x:Key="PageTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="26" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            </Style>
+            <Style x:Key="BandTitle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            </Style>
+            <Style x:Key="BandMeta" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="HeadCell" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13.5" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            </Style>
+            <Style x:Key="Mono" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Cascadia Code" />
+                <Setter Property="FontSize" Value="13.5" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+            <Style x:Key="FieldLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource InkSoftBrush}" />
+            </Style>
+            <Style x:Key="RowTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            </Style>
+            <Style x:Key="RowDesc" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13.5" />
+                <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            <!-- 卡内子卡：只靠填充和 1px 轮廓分层，没有色条、没有高光线 -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource PaperBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource RuleBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="14" />
+            </Style>
+            <Style x:Key="BandButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="8,4" />
+                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <!-- 隧道表：不虚拟化，行数少，保证模板里的列宽和分隔线一次到位 -->
+            <Style x:Key="CompactList" TargetType="ListView">
+                <Setter Property="SingleSelectionFollowsFocus" Value="True" />
+                <Setter Property="ItemsPanel">
+                    <Setter.Value>
+                        <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- 表格行：选中态就是一块铺满整行的扁色面，没有圆角、没有色条 -->
+            <Style x:Key="TableRow" TargetType="ListViewItem">
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <Border x:Name="RowSurface" Background="{TemplateBinding Background}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RowSurface.Background" Value="{StaticResource SoftBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Target="RowSurface.Background" Value="{StaticResource TableSelectionBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedUnfocused">
+                                            <VisualState.Setters>
+                                                <Setter Target="RowSurface.Background" Value="{StaticResource TableSelectionBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedPointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RowSurface.Background" Value="{StaticResource TableSelectionBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  ContentTransitions="{TemplateBinding ContentTransitions}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- 开关：默认模板的打开态在框架自己的字典里就近解析强调色，应用级改键压不住，
+                 所以整套模板自带，只留 40px 那颗胶囊，颜色只认 Signal 笔刷 -->
+            <Style x:Key="RowSwitch" TargetType="ToggleSwitch">
+                <Setter Property="OnContent" Value="" />
+                <Setter Property="OffContent" Value="" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleSwitch">
+                            <Grid x:Name="SwitchRoot" Width="40" Height="20" Background="Transparent">
+                                <Border x:Name="Track" CornerRadius="10" Background="{StaticResource SwitchTrackOffBrush}" />
+                                <Border x:Name="Thumb" Width="12" Height="12" CornerRadius="6" Margin="4,0,0,0"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                        Background="{StaticResource SwitchThumbBrush}"
+                                        BorderBrush="{StaticResource RuleBrush}" BorderThickness="1">
+                                    <Border.RenderTransform><TranslateTransform x:Name="ThumbShift" /></Border.RenderTransform>
+                                </Border>
+                                <Border x:Name="FocusRing" Width="44" Height="24" Margin="-2" CornerRadius="12"
+                                        BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="2" Opacity="0" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="ToggleStates">
+                                        <VisualState x:Name="Off">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbShift" Storyboard.TargetProperty="X"
+                                                                 To="0" Duration="0:0:0.14">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Track" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SwitchTrackOffBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Thumb" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SwitchThumbBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Thumb" Storyboard.TargetProperty="BorderBrush">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource RuleBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="On">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbShift" Storyboard.TargetProperty="X"
+                                                                 To="20" Duration="0:0:0.14">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Track" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SignalBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Thumb" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SignalInkBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Thumb" Storyboard.TargetProperty="BorderBrush">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource SignalBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters><Setter Target="SwitchRoot.Opacity" Value="0.9" /></VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters><Setter Target="SwitchRoot.Opacity" Value="0.8" /></VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters><Setter Target="SwitchRoot.Opacity" Value="0.4" /></VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="FocusStates">
+                                        <VisualState x:Name="Focused">
+                                            <VisualState.Setters><Setter Target="FocusRing.Opacity" Value="1" /></VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Unfocused" />
+                                        <VisualState x:Name="PointerFocused" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

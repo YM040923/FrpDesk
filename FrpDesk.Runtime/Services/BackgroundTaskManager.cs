@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.ServiceProcess;
 using System.Collections.Concurrent;
 using FrpDesk.Models;
+using TimeoutException = System.TimeoutException;
 
 namespace FrpDesk.Services;
 
@@ -19,6 +20,8 @@ public sealed class BackgroundTaskManager
     private readonly string _frpcPath;
     private readonly ProfileStore _store;
     private readonly ConcurrentDictionary<Guid, long> _logOffsets = new();
+    private readonly ConcurrentDictionary<Guid, DateTimeOffset> _legacyTaskMisses = new();
+    private static readonly TimeSpan LegacyTaskCacheDuration = TimeSpan.FromMinutes(5);
 
     public BackgroundTaskManager(string frpcPath, ProfileStore store)
     {
@@ -28,6 +31,7 @@ public sealed class BackgroundTaskManager
 
     public async Task StartAsync(TunnelProfile profile)
     {
+        profile.IsBusy = true;
         try
         {
             if (!File.Exists(_frpcPath))
@@ -40,7 +44,7 @@ public sealed class BackgroundTaskManager
             profile.IsBackgroundConfigured = true;
             profile.IsBackgroundRunning = true;
             profile.BackgroundStatus = "后台启动中";
-            profile.AddLog($"{DateTime.Now:HH:mm:ss}  已切换为 Windows 服务运行。关闭窗口、注销或断开 RDP 不会停止此实例。");
+            profile.AddLog("已切换为 Windows 服务运行。关闭窗口、注销或断开 RDP 不会停止此实例。");
         }
         catch (Exception exception)
         {
@@ -48,6 +52,10 @@ public sealed class BackgroundTaskManager
             profile.SetDiagnostic(diagnostic.Summary, diagnostic.Detail, diagnostic.Severity, diagnostic.LastExitCode, diagnostic.LastFailureAt);
             try { _store.SaveDiagnostic(profile); } catch (IOException) { }
             throw;
+        }
+        finally
+        {
+            profile.IsBusy = false;
         }
     }
 
@@ -58,6 +66,7 @@ public sealed class BackgroundTaskManager
     {
         var candidates = profiles.Where(profile => profile.IsBackgroundConfigured).ToArray();
         if (candidates.Length == 0) return;
+        foreach (var profile in candidates) profile.IsBusy = true;
         try
         {
             await RunAdminHelperAsync(CreateAdminRequest("remove", candidates));
@@ -67,7 +76,7 @@ public sealed class BackgroundTaskManager
                 profile.IsBackgroundRunning = false;
                 profile.BackgroundStatus = "后台已停止";
                 if (!profile.IsRunning) profile.State = "已停止";
-                profile.AddLog($"{DateTime.Now:HH:mm:ss}  Windows 服务后台运行已停止。");
+                profile.AddLog("Windows 服务后台运行已停止。");
             }
         }
         catch (Exception exception)
@@ -79,6 +88,10 @@ public sealed class BackgroundTaskManager
                 try { _store.SaveDiagnostic(profile); } catch (IOException) { }
             }
             throw;
+        }
+        finally
+        {
+            foreach (var profile in candidates) profile.IsBusy = false;
         }
     }
 
@@ -92,7 +105,7 @@ public sealed class BackgroundTaskManager
             profile.IsBackgroundConfigured = true;
             profile.IsBackgroundRunning = true;
             profile.BackgroundStatus = "后台启动中";
-            profile.AddLog($"{DateTime.Now:HH:mm:ss}  Windows 后台服务已重启，新配置正在生效。");
+            profile.AddLog("Windows 后台服务已重启，新配置正在生效。");
         }
         catch (Exception exception)
         {
@@ -118,7 +131,21 @@ public sealed class BackgroundTaskManager
             var serviceName = ServiceName(profile);
             var queriedStatus = await QueryServiceStatusAsync(serviceName);
             var serviceConfigured = queriedStatus is not null;
-            var legacyTaskConfigured = !serviceConfigured && await LegacyTaskExistsAsync(profile);
+            var legacyTaskConfigured = false;
+            if (!serviceConfigured)
+            {
+                if (_legacyTaskMisses.TryGetValue(profile.Id, out var checkedAt)
+                    && DateTimeOffset.UtcNow - checkedAt < LegacyTaskCacheDuration)
+                {
+                    legacyTaskConfigured = false;
+                }
+                else
+                {
+                    legacyTaskConfigured = await LegacyTaskExistsAsync(profile);
+                    if (legacyTaskConfigured) _legacyTaskMisses.TryRemove(profile.Id, out _);
+                    else _legacyTaskMisses[profile.Id] = DateTimeOffset.UtcNow;
+                }
+            }
             var configured = serviceConfigured || legacyTaskConfigured;
             var status = serviceConfigured ? ReadStatus(profile) : null;
             var running = serviceConfigured
@@ -127,6 +154,15 @@ public sealed class BackgroundTaskManager
             var wasRunning = profile.IsBackgroundRunning;
             profile.IsBackgroundConfigured = configured;
             profile.IsBackgroundRunning = running;
+            if (running != wasRunning)
+            {
+                if (running) profile.MarkStarted(status?.UpdatedAt);
+                else profile.MarkStopped();
+            }
+            else
+            {
+                profile.MarkChecked(status?.UpdatedAt);
+            }
             profile.BackgroundStatus = configured
                 ? legacyTaskConfigured ? "旧版后台任务已配置，点击切换为服务" : status?.ToDisplayText() ?? (running ? "后台运行中" : "后台已停止")
                 : "后台已停止";
@@ -210,14 +246,30 @@ public sealed class BackgroundTaskManager
             throw new InvalidOperationException("已取消管理员权限，后台服务未更改。");
         }
 
-        using (process) await process.WaitForExitAsync();
+        int exitCode;
+        using (process)
+        {
+            try
+            {
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(3));
+            }
+            catch (TimeoutException)
+            {
+                throw new InvalidOperationException(
+                    "后台服务操作超时，请稍后在 Windows 服务中检查该实例的服务状态。");
+            }
+
+            // ExitCode 必须在 Dispose 之前取，否则会抛“No process is associated with this object”。
+            exitCode = process.ExitCode;
+        }
+
         try
         {
-            if (process.ExitCode != 0)
+            if (exitCode != 0)
             {
                 var details = File.Exists(resultPath) ? File.ReadAllText(resultPath).Trim() : string.Empty;
                 throw new InvalidOperationException(string.IsNullOrWhiteSpace(details)
-                    ? $"Windows 服务操作失败（代码 {process.ExitCode}）。"
+                    ? $"Windows 服务操作失败（代码 {exitCode}）。"
                     : details);
             }
         }

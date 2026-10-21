@@ -13,7 +13,7 @@
     <SelfContained>true</SelfContained>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <VersionPrefix>0.1.4</VersionPrefix>
+    <VersionPrefix>0.1.8</VersionPrefix>
     <Product>FrpDesk</Product>
     <Authors>FrpDesk</Authors>
     <Description>Windows desktop manager for multiple independent FRP client instances.</Description>
@@ -26,6 +26,8 @@
     <Nullable>enable</Nullable>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <StartupObject>FrpDesk.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

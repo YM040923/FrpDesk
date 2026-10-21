@@ -15,29 +15,39 @@ public sealed class TomlEndpointParser
 
     public IReadOnlyList<TunnelEndpoint> Parse(string config)
     {
+        config = TomlText.NormalizeLineEndings(config);
         if (string.IsNullOrWhiteSpace(config)) return [];
 
+        var lines = SplitLines(config);
         var endpoints = new List<TunnelEndpoint>();
         var global = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string>? current = null;
         var note = "";
+        var index = 0;
 
-        foreach (var rawLine in config.Split(["\r\n", "\n"], StringSplitOptions.None))
+        while (index < lines.Count)
         {
+            var rawLine = lines[index];
             if (current is not null && TryReadNote(rawLine, out var parsedNote))
             {
                 note = parsedNote;
+                index++;
                 continue;
             }
 
             var line = RemoveInlineComment(rawLine).Trim();
-            if (line.Length == 0) continue;
+            if (line.Length == 0)
+            {
+                index++;
+                continue;
+            }
 
             if (line.Equals("[[proxies]]", StringComparison.OrdinalIgnoreCase))
             {
                 AddProxy(endpoints, global, current, note);
                 current = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 note = "";
+                index++;
                 continue;
             }
 
@@ -46,19 +56,77 @@ public sealed class TomlEndpointParser
                 AddProxy(endpoints, global, current, note);
                 current = null;
                 note = "";
+                index++;
                 continue;
             }
 
             var match = KeyValuePattern.Match(line);
-            if (!match.Success) continue;
+            if (!match.Success)
+            {
+                index++;
+                continue;
+            }
+
             var key = NormalizeKey(match.Groups["key"].Value);
             var value = match.Groups["value"].Value.Trim();
+            var nextIndex = ReadMultiLineValue(lines, index, out var fullValue);
+            if (fullValue != null) value = fullValue;
+            index = nextIndex;
+
             if (current is null) global[key] = value;
             else current[key] = value;
         }
 
         AddProxy(endpoints, global, current, note);
         return endpoints;
+    }
+
+    private static int ReadMultiLineValue(IReadOnlyList<string> lines, int index, out string? combinedValue)
+    {
+        combinedValue = null;
+        var line = RemoveInlineComment(lines[index]).Trim();
+        var match = KeyValuePattern.Match(line);
+        if (!match.Success) return index + 1;
+
+        var value = match.Groups["value"].Value.Trim();
+        if (!value.StartsWith('[')) return index + 1;
+
+        var balance = BracketBalance(value);
+        if (balance <= 0) return index + 1;
+
+        var parts = new List<string> { value };
+        var next = index + 1;
+        while (balance > 0 && next < lines.Count)
+        {
+            var trimmed = RemoveInlineComment(lines[next]).Trim();
+            if (IsTableHeader(lines[next])) break;
+            balance += BracketBalance(trimmed);
+            parts.Add(trimmed);
+            next++;
+        }
+        combinedValue = string.Join(" ", parts);
+        return next;
+    }
+
+    private static int BracketBalance(string value)
+    {
+        var depth = 0;
+        var inString = false;
+        var quote = '\0';
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (inString)
+            {
+                if (c == '\\' && quote == '"') { i++; continue; }
+                if (c == quote) inString = false;
+                continue;
+            }
+            if (c is '"' or '\'') { inString = true; quote = c; continue; }
+            if (c == '[') depth++;
+            else if (c == ']') depth--;
+        }
+        return depth;
     }
 
     public string GetServerEndpoint(string config)
@@ -73,13 +141,25 @@ public sealed class TomlEndpointParser
     public bool HasServerAddress(string config) =>
         !string.IsNullOrWhiteSpace(ReadString(ReadGlobal(config), "serveraddr"));
 
+    public int? GetGlobalPort(string config, string key)
+    {
+        var values = ReadGlobal(config);
+        return int.TryParse(ReadString(values, key), out var port) && port is > 0 and <= 65535
+            ? port
+            : null;
+    }
+
     public string UpdateProxy(string config, int index, TunnelEndpointEdit edit)
     {
         ValidateEdit(edit);
+        config = TomlText.NormalizeLineEndings(config);
         var lines = SplitLines(config);
         var starts = FindProxyStarts(lines);
         if (index < 0 || index >= starts.Count)
             throw new ArgumentOutOfRangeException(nameof(index), "找不到要编辑的隧道。");
+
+        var existingEndpoints = Parse(config);
+        ValidateUniqueName(existingEndpoints, edit.Name, index);
 
         var start = starts[index];
         var end = index + 1 < starts.Count ? starts[index + 1] : lines.Count;
@@ -114,6 +194,10 @@ public sealed class TomlEndpointParser
     public string AppendProxy(string config, TunnelEndpointEdit edit)
     {
         ValidateEdit(edit);
+        config = TomlText.NormalizeLineEndings(config);
+        var existingEndpoints = Parse(config);
+        ValidateUniqueName(existingEndpoints, edit.Name, null);
+
         var type = NormalizeType(edit.Type);
         if (type is "http" or "https")
             config = SetGlobalPort(config, type == "http" ? "vhostHTTPPort" : "vhostHTTPSPort",
@@ -127,6 +211,13 @@ public sealed class TomlEndpointParser
         if (!result.EndsWith('\n')) result += newLine;
         if (!result.EndsWith(newLine + newLine, StringComparison.Ordinal)) result += newLine;
         return result + block;
+    }
+
+    private static void ValidateUniqueName(IReadOnlyList<TunnelEndpoint> endpoints, string name, int? excludeIndex)
+    {
+        var trimmed = name.Trim();
+        if (endpoints.Any(endpoint => endpoint.Index != excludeIndex && string.Equals(endpoint.Name, trimmed, StringComparison.Ordinal)))
+            throw new ArgumentException($"隧道名称“{trimmed}”已存在，请使用其他名称。", nameof(name));
     }
 
     private static void AddProxy(
@@ -268,6 +359,7 @@ public sealed class TomlEndpointParser
 
     private static Dictionary<string, string> ReadGlobal(string config)
     {
+        config = TomlText.NormalizeLineEndings(config);
         var global = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rawLine in config.Split(["\r\n", "\n"], StringSplitOptions.None))
         {
@@ -325,22 +417,52 @@ public sealed class TomlEndpointParser
             var rawLine = lines[index];
             var commentIndex = FindInlineCommentIndex(rawLine);
             var comment = commentIndex < 0 ? "" : rawLine[commentIndex..].TrimEnd();
-            if (value is null)
-            {
-                if (comment.Length == 0) lines.RemoveAt(index);
-                else lines[index] = comment;
-                return end - 1;
-            }
-
             var field = FieldPattern.Match(rawLine);
             var indent = field.Groups["indent"].Value;
+            var spanEnd = FindValueSpanEnd(lines, index, end);
+            var removed = spanEnd - index - 1;
+
+            if (value is null)
+            {
+                if (comment.Length == 0)
+                {
+                    lines.RemoveRange(index, spanEnd - index);
+                    return end - (spanEnd - index);
+                }
+                lines[index] = comment;
+                if (removed > 0) lines.RemoveRange(index + 1, removed);
+                return end - removed;
+            }
+
             lines[index] = $"{indent}{key} = {value}{(comment.Length == 0 ? "" : " " + comment)}";
-            return end;
+            if (removed > 0) lines.RemoveRange(index + 1, removed);
+            return end - removed;
         }
 
         if (value is null) return end;
         lines.Insert(end, $"{key} = {value}");
         return end + 1;
+    }
+
+    private static int FindValueSpanEnd(IReadOnlyList<string> lines, int index, int end)
+    {
+        var raw = lines[index];
+        var commentIndex = FindInlineCommentIndex(raw);
+        var valueText = (commentIndex < 0 ? raw : raw[..commentIndex]).Trim();
+        var match = KeyValuePattern.Match(valueText);
+        if (!match.Success) return index + 1;
+        var value = match.Groups["value"].Value.Trim();
+        if (!value.StartsWith('[')) return index + 1;
+        var balance = BracketBalance(value);
+        var next = index + 1;
+        while (balance > 0 && next < end)
+        {
+            var trimmed = RemoveInlineComment(lines[next]).Trim();
+            if (IsTableHeader(lines[next])) break;
+            balance += BracketBalance(trimmed);
+            next++;
+        }
+        return next;
     }
 
     private static void SetGlobalPort(List<string> lines, string key, int value, int defaultPort)

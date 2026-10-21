@@ -73,6 +73,7 @@ public sealed class ProfileStore
 
     public TunnelProfile CreateProfile(string name, string config, IEnumerable<TunnelProfile> existing)
     {
+        config = TomlText.NormalizeLineEndings(config);
         var profile = new TunnelProfile(Guid.NewGuid(), name, config);
         try
         {
@@ -89,6 +90,7 @@ public sealed class ProfileStore
 
     public void UpdateProfile(TunnelProfile profile, string name, string config, IEnumerable<TunnelProfile> profiles)
     {
+        config = TomlText.NormalizeLineEndings(config);
         var configPath = ConfigPath(profile);
         var oldConfig = File.Exists(configPath) ? File.ReadAllText(configPath) : null;
         var oldIndex = File.Exists(_indexPath) ? File.ReadAllText(_indexPath) : null;
@@ -136,7 +138,7 @@ public sealed class ProfileStore
     public void SaveConfig(TunnelProfile profile)
     {
         Directory.CreateDirectory(ProfileDirectory(profile));
-        AtomicWrite(ConfigPath(profile), profile.Config);
+        AtomicWrite(ConfigPath(profile), TomlText.NormalizeLineEndings(profile.Config));
     }
 
     public void SaveDiagnostic(TunnelProfile profile)

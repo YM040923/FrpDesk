@@ -1,39 +1,41 @@
-<Window
+﻿<Window
     x:Class="FrpDesk.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="FrpDesk">
     <Grid x:Name="RootGrid" Background="Transparent" SizeChanged="RootGrid_SizeChanged">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="RailColumn" Width="214" />
+            <ColumnDefinition x:Name="RailColumn" Width="216" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TitleBarRow" Height="0" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <!-- chrome：顶栏与侧栏是同一片表面，之间不画线 -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" Grid.ColumnSpan="2" Height="48"
               Background="Transparent" AutomationProperties.Name="FrpDesk 窗口标题栏">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="TitleBarLeftInsetColumn" Width="40" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition x:Name="TitleBarRightInsetColumn" Width="16" />
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                <TextBlock Text="FrpDesk" FontSize="14" FontWeight="SemiBold" />
-                <TextBlock Text="›" FontSize="14" Foreground="{StaticResource InkSoftBrush}" />
-                <TextBlock x:Name="TitleBarPageText" Text="运行概览" FontSize="14"
-                           Foreground="{StaticResource InkSoftBrush}" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
+            <Border x:Name="TitleBarDragArea" Grid.ColumnSpan="4" Background="Transparent" />
+            <Button x:Name="RailToggleButton" Grid.Column="1" Width="40" Height="32" Margin="8,0,0,0"
+                    Style="{StaticResource QuietButton}" Padding="0" MinHeight="32" CornerRadius="8"
+                    Background="Transparent" BorderThickness="0" Click="RailToggle_Click"
+                    ToolTipService.ToolTip="展开或收起侧边栏"
+                    AutomationProperties.Name="切换侧边栏">
+                <FontIcon Glyph="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
+            </Button>
         </Grid>
-        <Border x:Name="NavigationRail" Grid.Row="1" Grid.Column="0" Background="Transparent"
-                BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,1,0">
-            <Grid Margin="14,24,14,16">
+        <Border x:Name="NavigationRail" Grid.Row="1" Grid.Column="0" Background="Transparent">
+            <Grid x:Name="RailRoot" Margin="12,18,12,14" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" /><RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Horizontal" Spacing="10">
+                <StackPanel x:Name="RailBrandRow" Orientation="Horizontal" Spacing="9" HorizontalAlignment="Left">
                     <Border Width="32" Height="32" CornerRadius="10" Background="{StaticResource SignalBrush}">
                         <Canvas Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Path Data="M 8.5,8 C 6.2,10 6.2,14 8.5,16"
@@ -52,154 +54,132 @@
                                      Canvas.Left="10.5" Canvas.Top="10.5" />
                         </Canvas>
                     </Border>
-                    <StackPanel VerticalAlignment="Center" Spacing="0">
-                        <TextBlock Text="FrpDesk" FontSize="16" FontWeight="SemiBold" />
-                        <TextBlock Text="Windows 管理端" FontSize="14" Foreground="{StaticResource InkSoftBrush}" />
-                    </StackPanel>
+                    <TextBlock x:Name="RailBrandText" Text="FrpDesk" FontSize="16" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
                 </StackPanel>
                 <Button x:Name="ProfileMenuButton" Grid.Row="1" Style="{StaticResource ProfileSelectorButton}"
-                        Margin="0,22,0,0" Click="ProfileMenu_Click"
-                        ToolTipService.ToolTip="选择配置和配置操作"
-                        AutomationProperties.Name="选择配置和配置操作">
-                    <Grid ColumnSpacing="7">
+                        Margin="0,20,0,0" Click="ProfileMenu_Click"
+                        ToolTipService.ToolTip="切换配置"
+                        AutomationProperties.Name="切换配置">
+                    <Grid x:Name="RailProfileGrid" ColumnSpacing="11">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="28" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition x:Name="RailProfileTextColumn" Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="28" Height="28" CornerRadius="8" Background="{StaticResource SignalSoftBrush}"
-                                VerticalAlignment="Center">
-                            <SymbolIcon Symbol="Document" Style="{StaticResource NavigationIcon}"
-                                        Foreground="{StaticResource SignalBrush}" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="3">
-                            <TextBlock Text="当前配置" FontSize="14" Foreground="{StaticResource MutedBrush}" />
+                        <SymbolIcon Symbol="Document" Style="{StaticResource NavigationIcon}"
+                                    Foreground="{StaticResource SignalBrush}" VerticalAlignment="Center" />
+                        <StackPanel x:Name="RailProfileText" Grid.Column="1" Spacing="2" MinWidth="0">
+                            <TextBlock Text="当前配置" FontSize="12" Foreground="{StaticResource MutedBrush}" />
                             <TextBlock Text="{Binding SelectedProfile.Name, FallbackValue=未选择配置, TargetNullValue=未选择配置}"
-                                       FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"
-                                       TextTrimming="WordEllipsis" MaxLines="2"
-                                       ToolTipService.ToolTip="{Binding SelectedProfile.Name}"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
                                        AutomationProperties.Name="当前配置"
                                        AutomationProperties.HelpText="{Binding SelectedProfile.Name}" />
                         </StackPanel>
-                        <FontIcon Grid.Column="2" Glyph="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                        <FontIcon x:Name="RailProfileChevron" Grid.Column="2" Glyph="&#xE70D;"
+                                  FontFamily="Segoe MDL2 Assets" FontSize="11"
                                   Foreground="{StaticResource InkSoftBrush}" VerticalAlignment="Center" />
                     </Grid>
                 </Button>
-                <TextBlock Grid.Row="2" Text="工作区" FontSize="14" FontWeight="SemiBold"
-                           Foreground="{StaticResource InkSoftBrush}" Margin="10,24,0,7" />
-                <StackPanel x:Name="NavigationButtons" Grid.Row="3" Spacing="4">
-                    <Button x:Name="HomeNavButton" Style="{StaticResource NavigationActiveButton}" Click="Home_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
+                <StackPanel x:Name="NavigationButtons" Grid.Row="2" Spacing="6" HorizontalAlignment="Stretch">
+                    <Button x:Name="HomeNavButton" Style="{StaticResource NavigationActiveButton}" Click="Home_Click"
+                            ToolTipService.ToolTip="运行概览">
+                        <StackPanel Orientation="Horizontal" Spacing="11">
                             <SymbolIcon x:Name="HomeNavIcon" Symbol="AllApps" Style="{StaticResource NavigationIcon}" />
-                            <TextBlock Text="运行概览" />
+                            <TextBlock x:Name="HomeNavLabel" Text="运行概览" FontSize="14" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button x:Name="EndpointsNavButton" Style="{StaticResource NavigationButton}" Click="Endpoints_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button x:Name="ProfilesNavButton" Style="{StaticResource NavigationButton}" Click="Profiles_Click"
+                            ToolTipService.ToolTip="配置管理">
+                        <StackPanel Orientation="Horizontal" Spacing="11">
+                            <SymbolIcon x:Name="ProfilesNavIcon" Symbol="List" Style="{StaticResource NavigationIcon}" />
+                            <TextBlock x:Name="ProfilesNavLabel" Text="配置管理" FontSize="14" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="EndpointsNavButton" Style="{StaticResource NavigationButton}" Click="Endpoints_Click"
+                            ToolTipService.ToolTip="隧道管理">
+                        <StackPanel Orientation="Horizontal" Spacing="11">
                             <SymbolIcon x:Name="EndpointsNavIcon" Symbol="Link" Style="{StaticResource NavigationIcon}" />
-                            <TextBlock Text="隧道管理" />
+                            <TextBlock x:Name="EndpointsNavLabel" Text="隧道管理" FontSize="14" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button x:Name="LogsNavButton" Style="{StaticResource NavigationButton}" Click="Logs_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button x:Name="LogsNavButton" Style="{StaticResource NavigationButton}" Click="Logs_Click"
+                            ToolTipService.ToolTip="运行日志">
+                        <StackPanel Orientation="Horizontal" Spacing="11">
                             <SymbolIcon x:Name="LogsNavIcon" Symbol="Bullets" Style="{StaticResource NavigationIcon}" />
-                            <TextBlock Text="运行日志" />
+                            <TextBlock x:Name="LogsNavLabel" Text="运行日志" FontSize="14" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button x:Name="SettingsNavButton" Style="{StaticResource NavigationButton}" Click="Settings_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button x:Name="SettingsNavButton" Style="{StaticResource NavigationButton}" Click="Settings_Click"
+                            ToolTipService.ToolTip="设置">
+                        <StackPanel Orientation="Horizontal" Spacing="11">
                             <SymbolIcon x:Name="SettingsNavIcon" Symbol="Setting" Style="{StaticResource NavigationIcon}" />
-                            <TextBlock Text="设置" />
+                            <TextBlock x:Name="SettingsNavLabel" Text="设置" FontSize="14" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                </StackPanel>
-                <StackPanel Grid.Row="4" Spacing="5">
-                    <Border Height="1" Background="{StaticResource RuleBrush}" Margin="2,0,2,7" />
-                    <TextBlock Text="FrpDesk" FontSize="13" Foreground="{StaticResource InkSoftBrush}" />
-                    <TextBlock Text="{Binding AppVersion}" FontSize="12" Foreground="{StaticResource InkSoftBrush}" />
                 </StackPanel>
             </Grid>
         </Border>
-        <Grid Grid.Row="1" Grid.Column="1">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-            <InfoBar x:Name="NoticeBar" Grid.Row="0" Margin="22,9,22,3" IsOpen="False" IsClosable="True"
-                     CloseButtonClick="NoticeBar_CloseButtonClick" />
-            <Grid x:Name="PageHost" Grid.Row="1">
+        <!-- 主体：一张带自己边缘的卡，四周只留 5 的沟槽 -->
+        <Border x:Name="ContentCard" Grid.Row="1" Grid.Column="1" Padding="0"
+                Margin="{StaticResource ChromeGutter}" CornerRadius="{StaticResource ContentCardCornerRadius}"
+                Background="{StaticResource ContentCardBrush}" BorderBrush="{StaticResource RuleBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                <InfoBar x:Name="NoticeBar" Grid.Row="0" Margin="20,12,20,0" IsOpen="False" IsClosable="True"
+                         CloseButtonClick="NoticeBar_CloseButtonClick" />
+                <Grid x:Name="PageHost" Grid.Row="1">
+                <!-- ===== 运行概览 ===== -->
                 <ScrollViewer x:Name="HomeContent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid x:Name="HomeLayout" Margin="31,25,31,24">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid Margin="0,0,0,24">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock Text="运行概览" FontSize="30" FontWeight="SemiBold" />
-                            <Button x:Name="RunButton" Grid.Column="1" Content="运行服务" Style="{StaticResource SignalButton}"
-                                    VerticalAlignment="Center" MinWidth="124" Click="RunButton_Click" />
+                    <StackPanel x:Name="HomeLayout" Margin="26,22,26,22" Spacing="18">
+                        <Grid>
+                            <TextBlock Style="{StaticResource PageTitle}" Text="运行概览" VerticalAlignment="Center" />
+                            <Button x:Name="RunButton" Content="运行服务" Style="{StaticResource SignalButton}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="124"
+                                    Click="RunButton_Click" />
                         </Grid>
-                        <Border x:Name="ServiceSummaryCard" Grid.Row="1"
-                                BorderBrush="{StaticResource ServiceBorderBrush}" BorderThickness="1" CornerRadius="15"
-                                Padding="21,20">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FBFDFF" Offset="0" />
-                                    <GradientStop Color="#EDF3FF" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <Grid x:Name="ServiceSummaryGrid" ColumnSpacing="20">
+
+                        <Border x:Name="ServiceSummaryCard" Style="{StaticResource Card}"
+                                CornerRadius="18" Padding="28,22">
+                            <Grid x:Name="ServiceSummaryGrid" ColumnSpacing="28">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="0.9*" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                <StackPanel x:Name="ServiceStateContent" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                    <Border x:Name="ServiceStateIcon" Width="39" Height="39" CornerRadius="12"
-                                            Background="{StaticResource SuccessSoftBrush}">
-                                        <Canvas Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Path x:Name="ServiceStateGlyph" Data="M 2,12 L 7,12 L 9.5,4 L 13,19 L 16,9 L 20,9"
-                                                  Stroke="{StaticResource SuccessBrush}" StrokeThickness="1.8"
+                                <StackPanel x:Name="ServiceStateContent" Orientation="Horizontal" Spacing="16"
+                                            VerticalAlignment="Center">
+                                    <Border Width="46" Height="46" CornerRadius="13"
+                                            Background="{StaticResource SoftBrush}" BorderBrush="{StaticResource RuleBrush}"
+                                            BorderThickness="1" VerticalAlignment="Center">
+                                        <Canvas Width="26" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Path x:Name="ServiceStateGlyph" Data="M 2,13 L 8,13 L 11,4 L 15,21 L 18,10 L 23,10"
+                                                  Stroke="{StaticResource MutedBrush}" StrokeThickness="1.9"
                                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                                         </Canvas>
                                     </Border>
-                                    <StackPanel Spacing="1">
-                                        <TextBlock Text="FRP 服务" FontSize="14" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock x:Name="SelectedStateText" Text="未选择配置" FontSize="20" FontWeight="SemiBold" />
-                                        <TextBlock x:Name="SelectedNameText" Text="请在左侧选择或添加配置" FontSize="14"
-                                                   Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+                                        <Ellipse x:Name="ServiceStateDot" Width="9" Height="9" Fill="{StaticResource MutedBrush}"
+                                                 VerticalAlignment="Center" />
+                                        <TextBlock x:Name="SelectedStateText" Text="未选择配置" FontSize="24"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </StackPanel>
-                                <StackPanel x:Name="ServiceMetaContent" Grid.Column="1" Spacing="7" VerticalAlignment="Center">
-                                    <Grid ColumnSpacing="9">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                        <SymbolIcon Symbol="Globe" Width="15" Height="15" Foreground="{StaticResource MutedBrush}"
-                                                    VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="服务器" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                                   VerticalAlignment="Center" />
-                                        <Border Grid.Column="2" Background="{StaticResource AddressChipBrush}" CornerRadius="8"
-                                                Padding="8,3" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="350">
-                                            <TextBlock x:Name="ServerEndpointText" Text="未配置" FontFamily="Cascadia Code"
-                                                       FontSize="14" Foreground="{StaticResource InkSoftBrush}"
-                                                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
-                                                       ToolTipService.ToolTip="服务器地址" />
-                                        </Border>
-                                    </Grid>
-                                    <Grid ColumnSpacing="9">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="16" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                        <SymbolIcon Symbol="Link" Width="16" Height="16" Foreground="{StaticResource MutedBrush}"
-                                                    VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="隧道" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                                   VerticalAlignment="Center" />
-                                        <Border Grid.Column="2" Background="{StaticResource AddressChipBrush}" CornerRadius="8"
-                                                Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                            <TextBlock x:Name="TunnelCountText" Text="0 个已配置" FontSize="14"
-                                                       FontWeight="SemiBold" Foreground="{StaticResource InkSoftBrush}" />
-                                        </Border>
-                                    </Grid>
+                                <StackPanel x:Name="ServiceMetaContent" Grid.Column="1" Spacing="3"
+                                            VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <TextBlock x:Name="ServerEndpointText" Text="未配置"
+                                               Style="{StaticResource Mono}" Foreground="{StaticResource InkSoftBrush}"
+                                               TextWrapping="NoWrap" HorizontalAlignment="Right"
+                                               ToolTipService.ToolTip="服务器地址" />
+                                    <TextBlock x:Name="TunnelCountText" Text="暂无隧道"
+                                               FontSize="13" Foreground="{StaticResource MutedBrush}"
+                                               HorizontalAlignment="Right" />
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Border x:Name="DiagnosticPanel" Grid.Row="2" Margin="0,12,0,0"
-                                Background="{StaticResource AlertSoftBrush}" BorderBrush="{StaticResource AlertBrush}"
-                                BorderThickness="1" CornerRadius="9" Padding="13,10" Visibility="Collapsed">
+
+                        <Border x:Name="DiagnosticPanel" Background="{StaticResource AlertSoftBrush}"
+                                BorderBrush="{StaticResource AlertBrush}" BorderThickness="1" CornerRadius="12"
+                                Padding="16,12" Visibility="Collapsed">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel Spacing="4">
@@ -210,146 +190,242 @@
                                         VerticalAlignment="Center" Click="CopyDiagnostic_Click" />
                             </Grid>
                         </Border>
-                        <Grid x:Name="OverviewColumns" Grid.Row="3" Margin="0,25,0,0" ColumnSpacing="24">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.6*" />
-                                <ColumnDefinition Width="0.78*" MinWidth="240" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid x:Name="HomeTunnelSection">
+
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                <TextBlock Text="隧道" FontSize="18" FontWeight="SemiBold" />
-                                <Border Grid.Row="1" Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                        BorderThickness="1" CornerRadius="15" Margin="0,11,0,0">
-                                    <Grid>
-                                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                        <Border x:Name="OverviewTunnelHeader" Background="{StaticResource SoftBrush}"
-                                                CornerRadius="14,14,0,0" Padding="15,10">
-                                            <Grid ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1.6*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
-                                                <TextBlock Text="名称" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBlock Grid.Column="1" Text="本地 → 公网" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBlock Grid.Column="2" Text="配置" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                            </Grid>
-                                        </Border>
-                                        <ListView x:Name="OverviewEndpointList" Grid.Row="1" ItemsSource="{Binding Endpoints}"
-                                                  SelectionMode="Single" SelectionChanged="OverviewEndpointList_SelectionChanged"
-                                                  Background="Transparent" BorderThickness="0"
-                                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                            <ListView.ItemContainerStyle>
-                                                <Style TargetType="ListViewItem">
-                                                    <Setter Property="Padding" Value="0" />
-                                                    <Setter Property="Margin" Value="0" />
-                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                    <Setter Property="MinHeight" Value="72" />
-                                                </Style>
-                                            </ListView.ItemContainerStyle>
-                                            <ListView.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,1,0,0" Padding="14,8">
-                                                        <Grid MinHeight="54" ColumnSpacing="12">
-                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1.6*" /><ColumnDefinition Width="96" /></Grid.ColumnDefinitions>
-                                                            <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                                                                <Border Width="32" Height="32" CornerRadius="8" Background="{StaticResource SignalSoftBrush}">
-                                                                    <SymbolIcon Symbol="World" Width="16" Height="16" Foreground="{StaticResource SignalBrush}"
-                                                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                                </Border>
-                                                                <StackPanel Spacing="1" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"
-                                                                               TextTrimming="CharacterEllipsis" />
-                                                                    <TextBlock Text="{Binding DisplayType}" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                                                               TextTrimming="CharacterEllipsis" />
-                                                                </StackPanel>
-                                                            </StackPanel>
-                                                            <Grid Grid.Column="1" ColumnSpacing="6" VerticalAlignment="Center">
-                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="0.9*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="1.1*" /></Grid.ColumnDefinitions>
-                                                                <Border Background="{StaticResource AddressChipBrush}" CornerRadius="8" Padding="7,4"
-                                                                        VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding LocalAddress}" FontFamily="Cascadia Code" FontSize="14"
-                                                                               Foreground="{StaticResource InkSoftBrush}" TextTrimming="CharacterEllipsis"
-                                                                               ToolTipService.ToolTip="{Binding LocalAddress}" />
-                                                                </Border>
-                                                                <TextBlock Grid.Column="1" Text="→" FontSize="17" Foreground="{StaticResource InkSoftBrush}"
-                                                                           VerticalAlignment="Center" />
-                                                                <Button Grid.Column="2" Style="{StaticResource AddressChipButton}" Tag="{Binding}"
-                                                                        Click="CopyRemoteEndpoint_Click" HorizontalAlignment="Stretch"
-                                                                        HorizontalContentAlignment="Left" MinWidth="0" Padding="7,4"
-                                                                        IsEnabled="{Binding HasCopyableRemoteAddress}"
-                                                                        ToolTipService.ToolTip="{Binding RemoteCopyText}"
-                                                                        AutomationProperties.Name="复制公网地址"
-                                                                        AutomationProperties.HelpText="{Binding RemoteCopyText}">
-                                                                    <TextBlock Text="{Binding RemoteAddress}" FontFamily="Cascadia Code" FontSize="14"
-                                                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                                                                </Button>
-                                                            </Grid>
-                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7"
-                                                                        VerticalAlignment="Center" Margin="6,0,0,0"
-                                                                        ToolTipService.ToolTip="仅表示隧道存在于当前配置；连接状态请查看 FRP 服务状态和运行日志。">
-                                                                <TextBlock Text="已配置" FontSize="15" Foreground="{StaticResource MutedBrush}" />
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListView.ItemTemplate>
-                                        </ListView>
-                                        <StackPanel x:Name="HomeEmptyTunnelsPanel" Grid.Row="1" MinHeight="160"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    Spacing="8" Margin="16" Visibility="Collapsed">
-                                            <TextBlock x:Name="HomeEmptyTunnelsTitle" Text="暂无隧道" FontSize="18"
-                                                       FontWeight="SemiBold" HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HomeEmptyTunnelsDetail" Text="添加配置后，隧道会显示在这里。" FontSize="14"
-                                                       Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" />
-                                            <Button x:Name="HomeEmptyAddTunnelButton" Content="添加隧道"
-                                                    Style="{StaticResource SignalButton}" MinHeight="40"
-                                                    Padding="12,6" HorizontalAlignment="Center" Click="AddTunnel_Click" />
-                                            <Button x:Name="HomeEmptyAddProfileButton" Content="添加配置"
-                                                    Style="{StaticResource SignalButton}" MinHeight="40"
-                                                    Padding="12,6" HorizontalAlignment="Center" Click="AddProfile_Click"
-                                                    Visibility="Collapsed" />
-                                        </StackPanel>
+                                <Border x:Name="OverviewTunnelHeader" Padding="20,15,20,7">
+                                    <Grid ColumnSpacing="18">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="0.8*" />
+                                            <ColumnDefinition Width="1.0*" />
+                                            <ColumnDefinition Width="1.7*" />
+                                            <ColumnDefinition Width="116" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource HeadCell}" Text="名称" />
+                                        <TextBlock Grid.Column="1" Style="{StaticResource HeadCell}" Text="本地服务" />
+                                        <TextBlock Grid.Column="2" Style="{StaticResource HeadCell}" Text="公网地址" />
+                                        <TextBlock Grid.Column="3" Style="{StaticResource HeadCell}" Text="状态" />
                                     </Grid>
                                 </Border>
-                            </Grid>
-                            <Border x:Name="RecentActivitySection" Grid.Column="1" BorderBrush="{StaticResource RuleBrush}"
-                                    BorderThickness="1,0,0,0" Padding="22,0,0,0">
-                                <StackPanel Spacing="12">
-                                    <TextBlock Text="近期输出" FontSize="18" FontWeight="SemiBold" />
-                                    <ItemsControl x:Name="RecentActivityList" ItemsSource="{Binding RecentActivityRows}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,2,0,12" MinHeight="42">
-                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="18" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                                                    <Border Width="1" Background="{StaticResource RuleBrush}" HorizontalAlignment="Center"
-                                                            Grid.RowSpan="2" VerticalAlignment="Stretch" Margin="0,10,0,-14" />
-                                                    <Ellipse Width="17" Height="17" Fill="{StaticResource SignalSoftBrush}"
-                                                             Stroke="{StaticResource CanvasBrush}" StrokeThickness="3"
-                                                             HorizontalAlignment="Center" VerticalAlignment="Top" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Message}" FontSize="15"
-                                                               Foreground="{StaticResource InkSoftBrush}" TextWrapping="Wrap" />
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Time}" FontFamily="Cascadia Code"
-                                                               FontSize="14" Foreground="{StaticResource InkSoftBrush}" Margin="0,3,0,0" />
+                                <ListView x:Name="OverviewEndpointList" Grid.Row="1" ItemsSource="{Binding Endpoints}"
+                                          Style="{StaticResource CompactList}" ItemContainerStyle="{StaticResource TableRow}"
+                                          SelectionMode="Single" Background="Transparent" BorderThickness="0"
+                                          SelectionChanged="OverviewEndpointList_SelectionChanged"
+                                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="20,13">
+                                                <Grid ColumnSpacing="18" MinHeight="36">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="0.8*" />
+                                                        <ColumnDefinition Width="1.0*" />
+                                                        <ColumnDefinition Width="1.7*" />
+                                                        <ColumnDefinition Width="116" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               ToolTipService.ToolTip="{Binding Name}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding LocalAddress}"
+                                                               Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource InkBrush}"
+                                                               ToolTipService.ToolTip="{Binding LocalAddress}" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding RemoteAddress}"
+                                                               Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource InkBrush}"
+                                                               ToolTipService.ToolTip="{Binding RemoteCopyText}" />
+                                                    <Grid Grid.Column="3" ColumnSpacing="9" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                        <Ellipse Width="9" Height="9" VerticalAlignment="Center"
+                                                                 Fill="{Binding Status, Converter={StaticResource ProxyStatusBrush}}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="14"
+                                                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                   Foreground="{Binding Status, Converter={StaticResource ProxyStatusBrush}}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </Grid>
                                                 </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock x:Name="RecentActivityEmptyText" Text="当前暂无 frpc 输出。"
-                                               FontSize="14" Foreground="{StaticResource InkSoftBrush}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <StackPanel x:Name="HomeEmptyTunnelsPanel" Grid.Row="1" MinHeight="150"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Spacing="5" Margin="20,40" Visibility="Collapsed">
+                                    <TextBlock x:Name="HomeEmptyTunnelsTitle" Style="{StaticResource RowTitle}" FontSize="16"
+                                               Text="当前配置还没有隧道" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HomeEmptyTunnelsDetail" Text="添加首条隧道后，运行状态会在这里汇总。"
+                                               FontSize="14" Foreground="{StaticResource MutedBrush}" TextAlignment="Center"
+                                               TextWrapping="Wrap" Margin="0,5,0,16" />
+                                    <Button x:Name="HomeEmptyAddTunnelButton" Content="添加隧道"
+                                            Style="{StaticResource SignalButton}" MinHeight="38" Padding="12,6"
+                                            HorizontalAlignment="Center" Click="AddTunnel_Click" />
+                                    <Button x:Name="HomeEmptyAddProfileButton" Content="添加配置"
+                                            Style="{StaticResource SignalButton}" MinHeight="38" Padding="12,6"
+                                            HorizontalAlignment="Center" Click="AddProfile_Click" Visibility="Collapsed" />
                                 </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                    <TextBlock Style="{StaticResource BandTitle}" Text="最近活动" />
+                                    <Button x:Name="OpenFullLogButton" Style="{StaticResource BandButton}" Content="查看完整日志"
+                                            HorizontalAlignment="Right" Click="Logs_Click" />
+                                </Grid>
+                                <ItemsControl x:Name="RecentActivityList" Grid.Row="1" ItemsSource="{Binding RecentActivityRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,1,0,0" Padding="20,12">
+                                                <Grid ColumnSpacing="14">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                    <Border Width="28" Height="28" CornerRadius="9"
+                                                            Background="{StaticResource SoftBrush}"
+                                                            BorderBrush="{StaticResource RuleBrush}" BorderThickness="1"
+                                                            VerticalAlignment="Center">
+                                                        <FontIcon Glyph="{Binding Mark}" FontFamily="Segoe MDL2 Assets"
+                                                                  FontSize="13" Foreground="{Binding MarkBrush}"
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" MinWidth="0">
+                                                        <TextBlock Text="{Binding Message}" FontSize="15" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                                   FontSize="13" Foreground="{StaticResource MutedBrush}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="RecentActivityEmptyText" Grid.Row="1" Text="当前暂无 frpc 输出。"
+                                           FontSize="14" Foreground="{StaticResource MutedBrush}" Margin="20,13,20,17" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                 </ScrollViewer>
 
-                <Grid x:Name="EndpointsContent" Margin="31,25,31,24" Visibility="Collapsed">
+                <!-- ===== 配置管理 ===== -->
+                <Grid x:Name="ProfilesContent" Margin="26,22,26,22" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <Grid x:Name="EndpointHeaderGrid" Margin="0,0,0,24">
+                    <Grid x:Name="ProfilesHeaderGrid" Margin="0,0,0,18">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="配置管理" VerticalAlignment="Center" />
+                        <StackPanel x:Name="ProfilesHeaderActions" Grid.Row="0" Orientation="Horizontal"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                            <Button x:Name="ProfilesStopAllButton" Content="全部停止" Style="{StaticResource QuietButton}"
+                                    Click="StopAll_Click" />
+                            <Button x:Name="ProfilesStartAllButton" Content="全部运行" Style="{StaticResource QuietButton}"
+                                    Click="StartAll_Click" />
+                            <Button Content="＋ 添加配置" Style="{StaticResource SignalButton}" Click="AddProfile_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="ProfilesBandMeta" Grid.Row="1" Style="{StaticResource BandMeta}"
+                                   Text="0 个配置" Margin="1,7,0,0" />
+                    </Grid>
+                    <Border Grid.Row="1" Style="{StaticResource Card}" VerticalAlignment="Stretch">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <Border x:Name="ProfilesHeaderRow" Padding="20,15,20,7">
+                                <Grid ColumnSpacing="18">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.1*" />
+                                        <ColumnDefinition Width="1.6*" />
+                                        <ColumnDefinition Width="64" />
+                                        <ColumnDefinition Width="0.9*" />
+                                        <ColumnDefinition Width="216" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource HeadCell}" Text="配置" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource HeadCell}" Text="服务器" />
+                                    <TextBlock Grid.Column="2" Style="{StaticResource HeadCell}" Text="隧道" />
+                                    <TextBlock Grid.Column="3" Style="{StaticResource HeadCell}" Text="状态" />
+                                    <TextBlock Grid.Column="4" Style="{StaticResource HeadCell}" Text="操作"
+                                               TextAlignment="Right" />
+                                </Grid>
+                            </Border>
+                            <Grid Grid.Row="1">
+                                <ListView x:Name="ProfileList" ItemsSource="{Binding ProfileRows}"
+                                          Style="{StaticResource CompactList}" ItemContainerStyle="{StaticResource TableRow}"
+                                          Background="Transparent" BorderThickness="0" SelectionMode="None"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="20,11">
+                                                <Grid ColumnSpacing="18" MinHeight="42">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="1.1*" />
+                                                        <ColumnDefinition Width="1.6*" />
+                                                        <ColumnDefinition Width="64" />
+                                                        <ColumnDefinition Width="0.9*" />
+                                                        <ColumnDefinition Width="216" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               ToolTipService.ToolTip="{Binding Name}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding ServerText}"
+                                                               Style="{StaticResource Mono}" VerticalAlignment="Center"
+                                                               ToolTipService.ToolTip="{Binding ServerText}" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding TunnelCountText}" FontSize="14"
+                                                               Foreground="{StaticResource InkSoftBrush}"
+                                                               VerticalAlignment="Center" />
+                                                    <Grid Grid.Column="3" ColumnSpacing="9" VerticalAlignment="Center">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                        <Ellipse Width="9" Height="9" VerticalAlignment="Center"
+                                                                 Fill="{Binding StateBrush}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding StateText}" FontSize="14"
+                                                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                   Foreground="{Binding StateBrush}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   ToolTipService.ToolTip="{Binding StateText}" />
+                                                    </Grid>
+                                                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6"
+                                                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                        <Button Content="{Binding ActionText}" Style="{StaticResource QuietButton}"
+                                                                Padding="10,5" MinHeight="32" FontSize="14" MinWidth="56"
+                                                                IsEnabled="{Binding CanToggle}"
+                                                                Tag="{Binding}" Click="ProfileRowToggle_Click" />
+                                                        <Button Content="编辑" Style="{StaticResource QuietButton}"
+                                                                Padding="10,5" MinHeight="32" FontSize="14" MinWidth="56"
+                                                                IsEnabled="{Binding CanEdit}"
+                                                                Tag="{Binding}" Click="ProfileRowEdit_Click" />
+                                                        <Button Content="删除" Style="{StaticResource QuietButton}"
+                                                                Padding="10,5" MinHeight="32" FontSize="14" MinWidth="56"
+                                                                Foreground="{StaticResource AlertBrush}"
+                                                                IsEnabled="{Binding CanDelete}"
+                                                                Tag="{Binding}" Click="ProfileRowDelete_Click" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                                <StackPanel x:Name="ProfilesEmptyPanel" HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" Spacing="5" Visibility="Collapsed"
+                                            MaxWidth="420" Margin="20,46">
+                                    <TextBlock Style="{StaticResource RowTitle}" FontSize="16" Text="还没有配置"
+                                               HorizontalAlignment="Center" />
+                                    <TextBlock Text="添加一个 FRP 配置后，可以在这里启动、停止、编辑或删除。"
+                                               FontSize="14" Foreground="{StaticResource MutedBrush}"
+                                               HorizontalAlignment="Center" TextAlignment="Center"
+                                               TextWrapping="Wrap" Margin="0,5,0,16" />
+                                    <Button Content="添加配置" Style="{StaticResource SignalButton}"
+                                            MinHeight="38" Padding="12,6" HorizontalAlignment="Center"
+                                            Click="AddProfile_Click" />
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ===== 隧道管理 ===== -->
+                <Grid x:Name="EndpointsContent" Margin="26,22,26,22" Visibility="Collapsed">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Grid x:Name="EndpointHeaderGrid" Margin="0,0,0,18">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <TextBlock Text="隧道管理" FontSize="30" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageTitle}" Text="隧道管理" VerticalAlignment="Center" />
                         <StackPanel x:Name="EndpointHeaderActions" Grid.Row="0" Orientation="Horizontal"
                                     HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
                             <Button x:Name="EditSelectedTunnelButton" Content="编辑所选隧道" Style="{StaticResource QuietButton}"
@@ -358,271 +434,352 @@
                             <Button x:Name="AddTunnelButton" Content="＋ 添加隧道" Style="{StaticResource SignalButton}"
                                     Click="AddTunnel_Click" />
                         </StackPanel>
+                        <TextBlock x:Name="EndpointBandMeta" Grid.Row="1" Style="{StaticResource BandMeta}"
+                                   Text="0 条" Margin="1,7,0,0" />
                     </Grid>
                     <Grid Grid.Row="1">
-                        <Border x:Name="EndpointTableBorder" Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                BorderThickness="1" CornerRadius="12">
+                        <Border x:Name="EndpointTableBorder" Style="{StaticResource Card}" VerticalAlignment="Stretch">
                             <Grid>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                                <Border Background="{StaticResource SoftBrush}" CornerRadius="11,11,0,0" Padding="12,11">
-                                    <Grid>
+                                <Border x:Name="EndpointHeaderRow" Padding="20,15,20,7">
+                                    <Grid ColumnSpacing="18">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.5*" />
-                                            <ColumnDefinition Width="1.4*" /><ColumnDefinition Width="3*" />
-                                            <ColumnDefinition Width="1*" />
+                                            <ColumnDefinition Width="0.8*" />
+                                            <ColumnDefinition Width="1.0*" />
+                                            <ColumnDefinition Width="1.8*" />
+                                            <ColumnDefinition Width="34" />
+                                            <ColumnDefinition Width="116" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="名称" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="1" Text="协议" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="2" Text="本地服务" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="3" Text="公网地址" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="4" Text="配置" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock Style="{StaticResource HeadCell}" Text="名称" />
+                                        <TextBlock Grid.Column="1" Style="{StaticResource HeadCell}" Text="本地服务" />
+                                        <TextBlock Grid.Column="2" Style="{StaticResource HeadCell}" Text="公网地址" />
+                                        <TextBlock Grid.Column="4" Style="{StaticResource HeadCell}" Text="状态" />
                                     </Grid>
                                 </Border>
-                                <ListView x:Name="EndpointList" Grid.Row="1" ItemsSource="{Binding Endpoints}" Background="Transparent"
-                                          BorderThickness="0" SelectionMode="Single" SelectionChanged="EndpointList_SelectionChanged"
-                                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                    <ListView.ItemContainerStyle>
-                                        <Style TargetType="ListViewItem">
-                                            <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="68" />
-                                        </Style>
-                                    </ListView.ItemContainerStyle>
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,0,1" Padding="12,9">
-                                                <Grid MinHeight="48" VerticalAlignment="Center">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="1.1*" /><ColumnDefinition Width="0.5*" />
-                                                        <ColumnDefinition Width="1.4*" /><ColumnDefinition Width="3*" />
-                                                        <ColumnDefinition Width="1*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel VerticalAlignment="Center" Spacing="2">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16" TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Text="{Binding Note}" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayType}" FontSize="15"
-                                                               Foreground="{StaticResource InkSoftBrush}" VerticalAlignment="Center" />
-                                                    <Button Grid.Column="2" Style="{StaticResource AddressChipButton}" Tag="{Binding}"
-                                                            Click="CopyLocalEndpoint_Click" HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Left" MinWidth="0"
-                                                            ToolTipService.ToolTip="{Binding LocalAddress}"
-                                                            AutomationProperties.Name="复制本地服务地址"
-                                                            AutomationProperties.HelpText="{Binding LocalAddress}">
-                                                        <TextBlock Text="{Binding LocalAddress}" FontFamily="Cascadia Code" FontSize="14"
-                                                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                                                    </Button>
-                                                    <Grid Grid.Column="3" ColumnSpacing="8" VerticalAlignment="Center">
-                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding RemoteAddress}" FontFamily="Cascadia Code" FontSize="14"
-                                                                   Foreground="{StaticResource InkSoftBrush}" VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding RemoteCopyText}" />
-                                                        <Button Grid.Column="1" Style="{StaticResource CopyButton}" Tag="{Binding}"
-                                                                Click="CopyRemoteEndpoint_Click" Padding="9,5" MinHeight="40"
+                                <Grid Grid.Row="1">
+                                    <ListView x:Name="EndpointList" ItemsSource="{Binding Endpoints}"
+                                              Style="{StaticResource CompactList}" ItemContainerStyle="{StaticResource TableRow}"
+                                              Background="Transparent" BorderThickness="0" SelectionMode="Single"
+                                              SelectionChanged="EndpointList_SelectionChanged"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="20,13">
+                                                    <Grid ColumnSpacing="18" MinHeight="36">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="0.8*" />
+                                                            <ColumnDefinition Width="1.0*" />
+                                                            <ColumnDefinition Width="1.8*" />
+                                                            <ColumnDefinition Width="34" />
+                                                            <ColumnDefinition Width="116" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                   ToolTipService.ToolTip="{Binding Name}" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding LocalAddress}"
+                                                                   Style="{StaticResource Mono}"
+                                                                   Foreground="{StaticResource InkBrush}" VerticalAlignment="Center"
+                                                                   ToolTipService.ToolTip="{Binding LocalAddress}" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding RemoteAddress}"
+                                                                   Style="{StaticResource Mono}"
+                                                                   Foreground="{StaticResource InkBrush}" VerticalAlignment="Center"
+                                                                   ToolTipService.ToolTip="{Binding RemoteCopyText}" />
+                                                        <Button Grid.Column="3" Style="{StaticResource CopyButton}" Tag="{Binding}"
+                                                                VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                                Click="CopyRemoteEndpoint_Click"
                                                                 IsEnabled="{Binding HasCopyableRemoteAddress}"
+                                                                ToolTipService.ToolTip="{Binding CopyActionLabel}"
                                                                 AutomationProperties.Name="{Binding CopyActionLabel}"
                                                                 AutomationProperties.HelpText="{Binding RemoteCopyText}">
-                                                            <TextBlock Text="{Binding CopyActionLabel}" />
+                                                            <FontIcon Glyph="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="15" />
                                                         </Button>
+                                                        <Grid Grid.Column="4" ColumnSpacing="9" VerticalAlignment="Center">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                                            <Ellipse Width="9" Height="9" VerticalAlignment="Center"
+                                                                     Fill="{Binding Status, Converter={StaticResource ProxyStatusBrush}}" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontSize="14"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                       Foreground="{Binding Status, Converter={StaticResource ProxyStatusBrush}}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
                                                     </Grid>
-                                                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="7"
-                                                                VerticalAlignment="Center" Margin="6,0,0,0"
-                                                                ToolTipService.ToolTip="仅表示隧道存在于当前配置；连接状态请查看 FRP 服务状态和运行日志。">
-                                                        <TextBlock Text="已配置" FontSize="15" Foreground="{StaticResource MutedBrush}" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                    <StackPanel x:Name="EmptyEndpointsPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                Spacing="5" Visibility="Collapsed" MaxWidth="420" Margin="20,46">
+                                        <TextBlock x:Name="EmptyEndpointsTitle" Style="{StaticResource RowTitle}" FontSize="16"
+                                                   Text="暂无隧道" HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="EmptyEndpointsDetail" Text="可添加首条隧道，或编辑完整 TOML 配置。" FontSize="14"
+                                                   Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"
+                                                   TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,16" />
+                                        <Button x:Name="EmptyAddTunnelButton" Content="添加隧道" Style="{StaticResource SignalButton}"
+                                                MinHeight="38" Padding="12,6" HorizontalAlignment="Center"
+                                                Click="AddTunnel_Click" />
+                                    </StackPanel>
+                                </Grid>
                             </Grid>
                         </Border>
-                        <StackPanel x:Name="EmptyEndpointsPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                    Spacing="8" Visibility="Collapsed" MaxWidth="420" Margin="16">
-                            <TextBlock x:Name="EmptyEndpointsTitle" Text="暂无隧道" FontSize="18"
-                                       FontWeight="SemiBold" HorizontalAlignment="Center" />
-                            <TextBlock x:Name="EmptyEndpointsDetail" Text="选择或添加一个配置后开始管理。" FontSize="14"
-                                       Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                        <StackPanel x:Name="NoProfilePanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Spacing="6" Visibility="Collapsed" MaxWidth="420" Margin="16">
+                            <TextBlock x:Name="NoProfileTitle" Style="{StaticResource RowTitle}" FontSize="16" Text="尚未选择配置"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock x:Name="NoProfileDetail" Text="隧道保存在配置文件中；请先添加或选择一个 FRP 配置。" FontSize="14"
+                                       Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"
+                                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,16" />
                             <Button x:Name="EmptyAddProfileButton" Content="添加配置" Style="{StaticResource SignalButton}"
-                                    MinHeight="40" Padding="12,6" HorizontalAlignment="Center"
-                                    Click="AddProfile_Click" Visibility="Collapsed" />
+                                    MinHeight="38" Padding="12,6" HorizontalAlignment="Center" Click="AddProfile_Click" />
                         </StackPanel>
                     </Grid>
                 </Grid>
 
-                <Grid x:Name="TunnelEditorContent" Margin="31,25,31,24" Visibility="Collapsed">
+                <!-- ===== 编辑隧道 ===== -->
+                <Grid x:Name="TunnelEditorContent" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <Grid x:Name="TunnelEditorHeaderGrid">
+                    <Grid x:Name="TunnelEditorHeaderGrid" Margin="26,22,26,0">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <TextBlock x:Name="TunnelEditorTitle" Text="编辑隧道" FontSize="30"
-                                   FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <StackPanel x:Name="EditorHeaderActions" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <TextBlock x:Name="TunnelEditorTitle" Text="编辑隧道" Style="{StaticResource PageTitle}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel x:Name="EditorHeaderActions" Grid.Row="0" Orientation="Horizontal"
+                                    HorizontalAlignment="Right" Spacing="8" VerticalAlignment="Center">
                             <Button Content="取消" Style="{StaticResource QuietButton}" Click="TunnelEditorCancel_Click" />
                             <Button Content="保存更改" Style="{StaticResource SignalButton}" MinWidth="126" Click="SaveTunnel_Click" />
                         </StackPanel>
                     </Grid>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,24,0,0">
-                        <Border x:Name="TunnelEditorForm" MaxWidth="760" HorizontalAlignment="Center" Background="{StaticResource PaperBrush}"
-                                BorderBrush="{StaticResource RuleBrush}" BorderThickness="1" CornerRadius="12">
-                            <StackPanel>
-                                <Border Padding="23,21" BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,0,1">
-                                    <StackPanel Spacing="14">
-                                        <TextBlock Text="基本信息" FontSize="18" FontWeight="SemiBold" />
-                                        <Grid ColumnSpacing="16">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="隧道名称" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelNameBox" Style="{StaticResource TextInput}" MaxLength="128" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="6">
-                                                <TextBlock Text="隧道类型" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <ComboBox x:Name="TunnelTypeBox" SelectedValuePath="Tag" MinHeight="42" SelectionChanged="TunnelType_SelectionChanged">
-                                                    <ComboBoxItem Content="TCP" Tag="tcp" /><ComboBoxItem Content="UDP" Tag="udp" />
-                                                    <ComboBoxItem Content="HTTP" Tag="http" /><ComboBoxItem Content="HTTPS" Tag="https" />
-                                                </ComboBox>
-                                            </StackPanel>
-                                        </Grid>
-                                        <StackPanel Spacing="6">
-                                            <TextBlock Text="备注" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,18,0,0">
+                        <StackPanel x:Name="TunnelEditorForm" Margin="26,0,26,22" Spacing="18">
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="基本信息" />
+                                    </Grid>
+                                    <Grid Padding="20,18,20,20" ColumnSpacing="22" RowSpacing="18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                                        <StackPanel Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="隧道名称" />
+                                            <TextBox x:Name="TunnelNameBox" Style="{StaticResource TextInput}" MaxLength="128" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="隧道类型" />
+                                            <ComboBox x:Name="TunnelTypeBox" SelectedValuePath="Tag" MinHeight="42"
+                                                      HorizontalAlignment="Stretch" SelectionChanged="TunnelType_SelectionChanged">
+                                                <ComboBoxItem Content="TCP" Tag="tcp" /><ComboBoxItem Content="UDP" Tag="udp" />
+                                                <ComboBoxItem Content="HTTP" Tag="http" /><ComboBoxItem Content="HTTPS" Tag="https" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="备注" />
                                             <TextBox x:Name="TunnelNoteBox" Style="{StaticResource TextInput}" MaxLength="256" />
                                         </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                                <Border Padding="23,21" BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,0,1">
-                                    <StackPanel Spacing="14">
-                                        <TextBlock Text="本地端点" FontSize="18" FontWeight="SemiBold" />
-                                        <Grid ColumnSpacing="16">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="本地地址" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelLocalHostBox" Style="{StaticResource TextInput}" MaxLength="255" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="6">
-                                                <TextBlock Text="本地端口" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelLocalPortBox" Style="{StaticResource TextInput}" MaxLength="5" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-                                <Border Padding="23,21">
-                                    <StackPanel Spacing="14">
-                                        <TextBlock Text="远端暴露" FontSize="18" FontWeight="SemiBold" />
-                                        <Grid x:Name="TcpRemotePanel" ColumnSpacing="16">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="服务器" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelServerAddressBox" Style="{StaticResource TextInput}" IsReadOnly="True" Background="{StaticResource SoftBrush}" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="6">
-                                                <TextBlock x:Name="RemotePortLabel" Text="公网端口" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelRemotePortBox" Style="{StaticResource TextInput}" MaxLength="5" />
-                                            </StackPanel>
-                                        </Grid>
-                                        <StackPanel x:Name="HttpRemotePanel" Spacing="12" Visibility="Collapsed">
-                                            <StackPanel Spacing="6">
-                                                <TextBlock x:Name="TunnelDomainsLabel" Text="自定义域名（每行一个）" FontSize="15"
-                                                           FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                <TextBox x:Name="TunnelDomainsBox" Style="{StaticResource TextInput}" AcceptsReturn="True"
-                                                         MinHeight="72" MaxLength="2048" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <CheckBox x:Name="TunnelUseSubdomainCheck" Content="使用服务端配置的子域名"
-                                                      Checked="TunnelUseSubdomain_Changed" Unchecked="TunnelUseSubdomain_Changed" />
-                                            <Grid ColumnSpacing="16">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
-                                                <StackPanel Spacing="6">
-                                                    <TextBlock Text="公网端口" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                    <TextBox x:Name="TunnelPublicPortBox" Style="{StaticResource TextInput}" MaxLength="5" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="6">
-                                                    <TextBlock Text="服务器" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                                    <TextBox x:Name="TunnelHttpServerBox" Style="{StaticResource TextInput}" IsReadOnly="True" Background="{StaticResource SoftBrush}" />
-                                                </StackPanel>
-                                            </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="本地端点" />
+                                    </Grid>
+                                    <Grid Padding="20,18,20,20" ColumnSpacing="22">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="本地地址" />
+                                            <TextBox x:Name="TunnelLocalHostBox" Style="{StaticResource TextInput}" MaxLength="255" />
                                         </StackPanel>
-                                        <TextBlock x:Name="TunnelEditorHintText" FontSize="14" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                                        <StackPanel Grid.Column="1" Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="本地端口" />
+                                            <TextBox x:Name="TunnelLocalPortBox" Style="{StaticResource TextInput}" MaxLength="5" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="远端暴露" />
+                                    </Grid>
+                                    <Grid x:Name="TcpRemotePanel" Padding="20,18,20,4" ColumnSpacing="22">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="7">
+                                            <TextBlock x:Name="RemotePortLabel" Style="{StaticResource FieldLabel}" Text="公网端口" />
+                                            <TextBox x:Name="TunnelRemotePortBox" Style="{StaticResource TextInput}" MaxLength="5" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="7">
+                                            <TextBlock Style="{StaticResource FieldLabel}" Text="服务器" />
+                                            <TextBox x:Name="TunnelServerAddressBox" Style="{StaticResource TextInput}"
+                                                     IsReadOnly="True" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel x:Name="HttpRemotePanel" Padding="20,18,20,4" Spacing="18" Visibility="Collapsed">
+                                        <StackPanel Spacing="7">
+                                            <TextBlock x:Name="TunnelDomainsLabel" Style="{StaticResource FieldLabel}"
+                                                       Text="自定义域名（每行一个）" />
+                                            <TextBox x:Name="TunnelDomainsBox" Style="{StaticResource TextInput}" AcceptsReturn="True"
+                                                     MinHeight="72" MaxLength="2048" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <CheckBox x:Name="TunnelUseSubdomainCheck" Content="使用服务端配置的子域名"
+                                                  Checked="TunnelUseSubdomain_Changed" Unchecked="TunnelUseSubdomain_Changed" />
+                                        <Grid ColumnSpacing="22">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="7">
+                                                <TextBlock Style="{StaticResource FieldLabel}" Text="公网端口（vhost）" />
+                                                <TextBox x:Name="TunnelPublicPortBox" Style="{StaticResource TextInput}" MaxLength="5" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="7">
+                                                <TextBlock Style="{StaticResource FieldLabel}" Text="服务器" />
+                                                <TextBox x:Name="TunnelHttpServerBox" Style="{StaticResource TextInput}"
+                                                         IsReadOnly="True" />
+                                            </StackPanel>
+                                        </Grid>
                                     </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Border>
+                                    <TextBlock x:Name="TunnelEditorHintText" Padding="20,14,20,18" FontSize="14"
+                                               Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </ScrollViewer>
                 </Grid>
-                <Grid x:Name="LogsContent" Margin="31,25,31,24" Visibility="Collapsed">
+
+                <!-- ===== 运行日志 ===== -->
+                <Grid x:Name="LogsContent" Margin="26,22,26,22" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <Grid>
-                        <TextBlock Text="运行日志" FontSize="30" FontWeight="SemiBold" />
+                    <Grid Margin="0,0,0,18">
+                        <TextBlock Style="{StaticResource PageTitle}" Text="运行日志" VerticalAlignment="Center" />
                         <Button x:Name="CopyLogButton" Content="复制日志" Style="{StaticResource QuietButton}"
                                 HorizontalAlignment="Right" VerticalAlignment="Center" Click="CopyLog_Click" />
                     </Grid>
-                    <Border Grid.Row="1" Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                            BorderThickness="1" CornerRadius="12" Margin="0,24,0,0">
+                    <Border Grid.Row="1" Style="{StaticResource Card}">
                         <Grid>
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                            <Border BorderBrush="{StaticResource RuleBrush}" BorderThickness="0,0,0,1" Padding="16,12">
-                                <StackPanel Orientation="Horizontal" Spacing="9">
-                                    <TextBlock Text="frpc 输出" FontSize="18" FontWeight="SemiBold" />
-                                    <Ellipse x:Name="LogLiveDot" Width="7" Height="7" Fill="{StaticResource MutedBrush}" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="LogLiveStatus" Text="服务未运行" FontSize="15"
-                                               Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
-                                </StackPanel>
+                            <Border Background="{StaticResource SoftBrush}" Padding="20,13">
+                                <Grid ColumnSpacing="12">
+                                    <TextBlock Style="{StaticResource BandTitle}" Text="frpc 输出" />
+                                    <StackPanel Orientation="Horizontal" Spacing="9" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Ellipse x:Name="LogLiveDot" Width="9" Height="9" Fill="{StaticResource MutedBrush}"
+                                                 VerticalAlignment="Center" />
+                                        <TextBlock x:Name="LogLiveStatus" Text="服务未运行" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
                             </Border>
-                            <Grid Grid.Row="1" Margin="14">
+                            <Grid Grid.Row="1">
                                 <ListView x:Name="LogLinesList" ItemsSource="{Binding LogEntries}" SelectionMode="Multiple"
-                                          Background="{StaticResource LogSurfaceBrush}" BorderThickness="0"
+                                          ItemContainerStyle="{StaticResource TableRow}"
+                                          Background="Transparent" BorderThickness="0"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                    <ListView.ItemContainerStyle>
-                                        <Style TargetType="ListViewItem">
-                                            <Setter Property="Padding" Value="0" />
-                                            <Setter Property="Margin" Value="0" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <Setter Property="MinHeight" Value="38" />
-                                        </Style>
-                                    </ListView.ItemContainerStyle>
                                     <ListView.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="{Binding RowBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                                    BorderThickness="0,0,0,1" Padding="16,9">
-                                                <Grid ColumnSpacing="14">
+                                            <Border Background="{Binding RowBrush}" Padding="20,7">
+                                                <Grid ColumnSpacing="18">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="82" />
-                                                        <ColumnDefinition Width="88" />
+                                                        <ColumnDefinition Width="104" />
+                                                        <ColumnDefinition Width="92" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Time}" FontFamily="Cascadia Code" FontSize="14"
-                                                               Foreground="{StaticResource MutedBrush}" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="14"
+                                                    <TextBlock Text="{Binding Time}" Style="{StaticResource Mono}"
+                                                               FontSize="13" Foreground="{StaticResource MutedBrush}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Level}" FontSize="13"
                                                                FontWeight="Bold" Foreground="{Binding LevelBrush}" />
-                                                    <TextBlock Grid.Column="2" Text="{Binding Message}" FontFamily="Cascadia Code"
-                                                               FontSize="14" Foreground="{StaticResource InkSoftBrush}" TextWrapping="Wrap" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Message}" Style="{StaticResource Mono}"
+                                                               FontSize="14" Foreground="{StaticResource InkBrush}" TextWrapping="Wrap" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
-                                <TextBlock x:Name="LogEmptyText" Text="启动服务后，frpc 输出会显示在这里。" FontSize="15" Foreground="{StaticResource MutedBrush}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+                                <TextBlock x:Name="LogEmptyText" Text="启动服务后，frpc 输出会显示在这里。" FontSize="15"
+                                           Foreground="{StaticResource MutedBrush}" Margin="20,0"
+                                           HorizontalAlignment="Center" TextAlignment="Center"
+                                           VerticalAlignment="Center" IsHitTestVisible="False" />
                             </Grid>
                         </Grid>
                     </Border>
                 </Grid>
 
-                <Grid x:Name="SettingsContent" Margin="31,25,31,24" Visibility="Collapsed">
+                <!-- ===== 设置 ===== -->
+                <Grid x:Name="SettingsContent" Visibility="Collapsed">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <TextBlock Text="设置" FontSize="30" FontWeight="SemiBold" />
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,24,0,0">
-                        <StackPanel MaxWidth="720" HorizontalAlignment="Center" Spacing="16">
-                            <Border Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                    BorderThickness="1" CornerRadius="12" Padding="23,21">
-                                <StackPanel Spacing="18">
-                                    <Grid ColumnSpacing="16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                    <Grid x:Name="SettingsHeaderGrid" Margin="26,22,26,18">
+                        <TextBlock Style="{StaticResource PageTitle}" Text="设置" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <TextBlock x:Name="SettingsStatusText" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" MaxWidth="360" TextAlignment="Right" />
+                            <Button Content="保存设置" Style="{StaticResource SignalButton}" MinWidth="124"
+                                    VerticalAlignment="Center" Click="SaveSettings_Click" />
+                        </StackPanel>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="SettingsLayout" Spacing="18" Margin="26,0,26,22">
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="窗口与启动" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="52" /></Grid.ColumnDefinitions>
                                         <StackPanel Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Text="窗口背景材质" FontSize="16" FontWeight="SemiBold" />
-                                            <TextBlock Text="选择窗口底层效果；内容面保持不透明以保证可读性。"
-                                                       FontSize="14" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="关闭窗口时最小化到托盘" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Name="CloseToTrayToggle" Grid.Column="1" Style="{StaticResource RowSwitch}"
+                                                      AutomationProperties.Name="关闭窗口时最小化到托盘" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="52" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="恢复窗口布局" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Name="RestoreLayoutToggle" Grid.Column="1" Style="{StaticResource RowSwitch}"
+                                                      AutomationProperties.Name="恢复窗口布局" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="52" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="登录 Windows 后自动启动" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Name="AutoStartToggle" Grid.Column="1" Style="{StaticResource RowSwitch}"
+                                                      AutomationProperties.Name="登录 Windows 后自动启动" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="后台服务" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center" MinWidth="0">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="当前配置的后台服务" />
+                                            <TextBlock x:Name="BackgroundServiceProfileText" Style="{StaticResource RowDesc}"
+                                                       Text="尚未选择配置。" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button x:Name="BackgroundServiceButton" Grid.Column="1"
+                                                Style="{StaticResource QuietButton}" VerticalAlignment="Center"
+                                                Click="BackgroundServiceButton_Click" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="外观" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="窗口背景材质" />
                                         </StackPanel>
                                         <ComboBox x:Name="BackdropMaterialBox" Grid.Column="1" SelectedValuePath="Tag"
-                                                  VerticalAlignment="Center" MinHeight="40" AutomationProperties.Name="窗口背景材质"
+                                                  Width="180" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                  AutomationProperties.Name="窗口背景材质"
                                                   SelectionChanged="BackdropMaterial_SelectionChanged">
                                             <ComboBoxItem Content="Mica" Tag="Mica" />
                                             <ComboBoxItem Content="Mica Alt" Tag="Mica Alt" />
@@ -630,101 +787,123 @@
                                             <ComboBoxItem Content="Acrylic Thin" Tag="Acrylic Thin" />
                                         </ComboBox>
                                     </Grid>
-                                    <TextBlock x:Name="BackdropSupportText" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock Text="材质切换会即时预览并保存；其他设置请点击下方“保存设置”。"
-                                               FontSize="14" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                                    <Border Height="1" Background="{StaticResource RuleBrush}" />
-                                    <Grid MinHeight="52">
-                                        <StackPanel Spacing="2" Margin="0,0,72,0" VerticalAlignment="Center">
-                                            <TextBlock Text="关闭窗口时最小化到托盘" FontSize="16" FontWeight="SemiBold" />
-                                            <TextBlock Text="frpc 服务会继续运行。" FontSize="14" Foreground="{StaticResource MutedBrush}" />
+                                    <TextBlock x:Name="BackdropSupportText" FontSize="13.5" Foreground="{StaticResource MutedBrush}"
+                                               TextWrapping="Wrap" Margin="20,0,20,14" Visibility="Collapsed" />
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="点缀色主题" />
                                         </StackPanel>
-                                        <ToggleSwitch x:Name="CloseToTrayToggle" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                      OnContent="开" OffContent="关"
-                                                      AutomationProperties.Name="关闭窗口时最小化到托盘" />
+                                        <StackPanel x:Name="ThemeChoicePanel" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="侧栏" />
+                                        </StackPanel>
+                                        <ComboBox x:Name="RailModeBox" Grid.Column="1" SelectedValuePath="Tag" Width="150"
+                                                  VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                  AutomationProperties.Name="侧栏宽度"
+                                                  SelectionChanged="RailMode_SelectionChanged">
+                                            <ComboBoxItem Content="展开" Tag="wide" />
+                                            <ComboBoxItem Content="收起（图标）" Tag="icon" />
+                                        </ComboBox>
                                     </Grid>
                                 </StackPanel>
                             </Border>
 
-                            <Expander Header="更多设置" IsExpanded="False">
-                                <StackPanel Margin="0,12,0,0" Spacing="14">
-                                    <Border Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                            BorderThickness="1" CornerRadius="12" Padding="23,21">
-                                        <StackPanel Spacing="0">
-                                            <TextBlock Text="窗口与启动" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8" />
-                                            <Grid MinHeight="66">
-                                                <StackPanel Spacing="3" Margin="0,0,72,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="恢复窗口布局" FontWeight="SemiBold" />
-                                                    <TextBlock Text="下次启动时恢复上一次的位置与尺寸。" FontSize="14" Foreground="{StaticResource MutedBrush}" />
-                                                </StackPanel>
-                                                <ToggleSwitch x:Name="RestoreLayoutToggle" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                              OnContent="开" OffContent="关"
-                                                              AutomationProperties.Name="恢复窗口布局" />
-                                                <Border Height="1" Background="{StaticResource RuleBrush}" VerticalAlignment="Bottom" />
-                                            </Grid>
-                                            <Grid MinHeight="66">
-                                                <StackPanel Spacing="3" Margin="0,0,72,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="登录 Windows 后自动启动" FontWeight="SemiBold" />
-                                                    <TextBlock Text="自动启动时直接进入系统托盘。" FontSize="14" Foreground="{StaticResource MutedBrush}" />
-                                                </StackPanel>
-                                                <ToggleSwitch x:Name="AutoStartToggle" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                              OnContent="开" OffContent="关"
-                                                              AutomationProperties.Name="登录 Windows 后自动启动" />
-                                            </Grid>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="日志" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="界面保留的日志行数" />
                                         </StackPanel>
-                                    </Border>
-
-                                    <Border Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                            BorderThickness="1" CornerRadius="12" Padding="23,21">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="运行日志" FontSize="18" FontWeight="SemiBold" />
-                                            <Grid MinHeight="54">
-                                                <StackPanel Spacing="3" Margin="0,0,150,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="界面保留的日志行数" FontWeight="SemiBold" />
-                                                    <TextBlock Text="只影响窗口内存，不会清理后台日志文件。" FontSize="14" Foreground="{StaticResource MutedBrush}" />
-                                                </StackPanel>
-                                                <ComboBox x:Name="LogLimitBox" Width="126" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                          SelectedValuePath="Tag" AutomationProperties.Name="界面保留的日志行数">
-                                                    <ComboBoxItem Content="200 行" Tag="200" /><ComboBoxItem Content="400 行" Tag="400" />
-                                                    <ComboBoxItem Content="800 行" Tag="800" />
-                                                </ComboBox>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Background="{StaticResource PaperBrush}" BorderBrush="{StaticResource RuleBrush}"
-                                            BorderThickness="1" CornerRadius="12" Padding="23,21">
-                                        <StackPanel Spacing="11">
-                                            <TextBlock Text="本地数据" FontSize="18" FontWeight="SemiBold" />
-                                            <Grid ColumnSpacing="12">
-                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                <TextBox x:Name="DataPathBox" IsReadOnly="True" Background="{StaticResource SoftBrush}"
-                                                         FontFamily="Cascadia Code" FontSize="14" AutomationProperties.Name="应用数据目录" />
-                                                <Button Grid.Column="1" Content="打开目录" Style="{StaticResource QuietButton}"
-                                                        Click="OpenDataFolder_Click" />
-                                            </Grid>
-                                            <Grid ColumnSpacing="12">
-                                                <TextBlock Text="恢复窗口默认大小与位置" FontSize="14" Foreground="{StaticResource MutedBrush}"
-                                                           VerticalAlignment="Center" />
-                                                <Button Grid.Column="1" Content="恢复默认布局" Style="{StaticResource QuietButton}"
-                                                        Click="ResetWindowLayout_Click" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
+                                        <ComboBox x:Name="LogLimitBox" Grid.Column="1" SelectedValuePath="Tag" Width="140"
+                                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                  AutomationProperties.Name="界面保留的日志行数">
+                                            <ComboBoxItem Content="200 行" Tag="200" /><ComboBoxItem Content="400 行" Tag="400" />
+                                            <ComboBoxItem Content="800 行" Tag="800" />
+                                        </ComboBox>
+                                    </Grid>
                                 </StackPanel>
-                            </Expander>
+                            </Border>
 
-                            <Grid Margin="0,2,0,18">
-                                <TextBlock x:Name="SettingsStatusText" FontSize="14" Foreground="{StaticResource SuccessBrush}"
-                                           VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,150,0" />
-                                <Button Content="保存设置" Style="{StaticResource SignalButton}" HorizontalAlignment="Right"
-                                        MinWidth="124" Click="SaveSettings_Click" />
-                            </Grid>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="本地数据" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="3" VerticalAlignment="Center" MinWidth="0">
+                                            <TextBlock Style="{StaticResource RowTitle}" Text="配置与诊断目录" />
+                                            <TextBlock x:Name="DataPathBox" Style="{StaticResource Mono}" FontSize="13.5"
+                                                       Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"
+                                                       TextWrapping="Wrap" ToolTipService.ToolTip="应用数据目录"
+                                                       AutomationProperties.Name="应用数据目录" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <Button Content="打开目录" Style="{StaticResource QuietButton}" Click="OpenDataFolder_Click" />
+                                            <Button Content="恢复默认布局" Style="{StaticResource QuietButton}"
+                                                    Click="ResetWindowLayout_Click" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,4">
+                                <StackPanel>
+                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
+                                        <TextBlock Style="{StaticResource BandTitle}" Text="关于" />
+                                    </Grid>
+                                    <Grid Padding="20,18" ColumnSpacing="26">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                                            <Border Width="40" Height="40" CornerRadius="12" Background="{StaticResource SignalBrush}">
+                                                <Canvas Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <Path Data="M 8.5,8 C 6.2,10 6.2,14 8.5,16"
+                                                          Stroke="{StaticResource SignalInkBrush}" StrokeThickness="1.7"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                    <Path Data="M 15.5,8 C 17.8,10 17.8,14 15.5,16"
+                                                          Stroke="{StaticResource SignalInkBrush}" StrokeThickness="1.7"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                    <Path Data="M 5.5,4.5 C 1.2,8 1.2,16 5.5,19.5"
+                                                          Stroke="{StaticResource SignalInkBrush}" StrokeThickness="1.7"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                    <Path Data="M 18.5,4.5 C 22.8,8 22.8,16 18.5,19.5"
+                                                          Stroke="{StaticResource SignalInkBrush}" StrokeThickness="1.7"
+                                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                    <Ellipse Width="3" Height="3" Fill="{StaticResource SignalInkBrush}"
+                                                             Canvas.Left="10.5" Canvas.Top="10.5" />
+                                                </Canvas>
+                                            </Border>
+                                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="AboutVersionText" Style="{StaticResource RowTitle}" Text="FrpDesk" />
+                                                <TextBlock x:Name="AboutUpdateText" Style="{StaticResource RowDesc}"
+                                                           Text="" Visibility="Collapsed" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                                                    VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <Button x:Name="CheckUpdateButton" Content="检查更新" Style="{StaticResource QuietButton}"
+                                                    Click="CheckUpdate_Click" />
+                                            <Button Content="发布页" Style="{StaticResource QuietButton}"
+                                                    Click="OpenReleases_Click" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </Grid>
-        </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

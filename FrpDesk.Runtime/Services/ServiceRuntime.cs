@@ -91,6 +91,7 @@ internal sealed class FrpcWindowsService : ServiceBase
     private readonly CancellationTokenSource _stop = new();
     private readonly object _logLock = new();
     private readonly object _statusLock = new();
+    private readonly object _processLock = new();
     private ServiceRuntimeStatus? _lastStatus;
     private DiagnosticSnapshot? _diagnostic;
     private Task? _worker;
@@ -115,12 +116,21 @@ internal sealed class FrpcWindowsService : ServiceBase
 
     protected override void OnStop()
     {
-        _stop.Cancel();
-        KillFrpc();
+        lock (_processLock)
+        {
+            _stop.Cancel();
+            KillFrpcLocked();
+        }
         try { _worker?.Wait(TimeSpan.FromSeconds(10)); } catch { }
         _diagnostic = null;
         WriteStatus(new(ServiceRuntimeState.Stopped, 0, null, 0, DateTimeOffset.Now));
         AppendLog("Windows 服务已停止。");
+    }
+
+    private void KillFrpcLocked()
+    {
+        var frpc = _frpc;
+        try { if (frpc is { HasExited: false }) frpc.Kill(entireProcessTree: true); } catch { }
     }
 
     protected override void OnShutdown() => OnStop();
@@ -141,6 +151,7 @@ internal sealed class FrpcWindowsService : ServiceBase
                 return;
             }
         }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { return; }
         catch (Exception exception)
         {
             var diagnostic = Diagnostics.VerificationUnavailable(exception);
@@ -158,7 +169,15 @@ internal sealed class FrpcWindowsService : ServiceBase
             try
             {
                 process = StartFrpc();
-                _frpc = process;
+                lock (_processLock)
+                {
+                    if (_stop.IsCancellationRequested)
+                    {
+                        KillProcess(process);
+                        return;
+                    }
+                    _frpc = process;
+                }
                 _diagnostic = null;
                 WriteStatus(new(ServiceRuntimeState.Running, retryCount + 1, null, 0, DateTimeOffset.Now));
                 AppendLog($"frpc 已启动（第 {retryCount + 1} 次）。");
@@ -209,10 +228,19 @@ internal sealed class FrpcWindowsService : ServiceBase
             }
             finally
             {
-                if (ReferenceEquals(_frpc, process)) _frpc = null;
+                lock (_processLock)
+                {
+                    if (ReferenceEquals(_frpc, process)) _frpc = null;
+                    if (process is not null && _stop.IsCancellationRequested) KillProcess(process);
+                }
                 process?.Dispose();
             }
         }
+    }
+
+    private static void KillProcess(Process process)
+    {
+        try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
     }
 
     private Process StartFrpc()
@@ -231,12 +259,21 @@ internal sealed class FrpcWindowsService : ServiceBase
         startInfo.ArgumentList.Add("-c");
         startInfo.ArgumentList.Add(_options.ConfigPath);
         var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        process.OutputDataReceived += (_, e) => { if (e.Data is not null) AppendLog(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) AppendLog(e.Data); };
-        if (!process.Start()) throw new InvalidOperationException("frpc 进程未能启动。");
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        return process;
+        try
+        {
+            if (!process.Start()) throw new InvalidOperationException("frpc 进程未能启动。");
+            process.OutputDataReceived += (_, e) => { if (e.Data is not null) AppendLog(e.Data); };
+            process.ErrorDataReceived += (_, e) => { if (e.Data is not null) AppendLog(e.Data); };
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            return process;
+        }
+        catch
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
+            process.Dispose();
+            throw;
+        }
     }
 
     private async Task<(int ExitCode, IReadOnlyList<string> Output)> VerifyConfigAsync()
@@ -256,6 +293,10 @@ internal sealed class FrpcWindowsService : ServiceBase
         startInfo.ArgumentList.Add("-c");
         startInfo.ArgumentList.Add(_options.ConfigPath);
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("无法运行 frpc 配置校验。");
+        using var stopRegistration = _stop.Token.Register(() =>
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
+        });
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
         try
@@ -267,24 +308,32 @@ internal sealed class FrpcWindowsService : ServiceBase
             try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch { }
             throw new TimeoutException("配置校验超时，已终止校验进程。");
         }
+        if (_stop.IsCancellationRequested) throw new OperationCanceledException(_stop.Token);
         var output = ((await outputTask) + Environment.NewLine + (await errorTask))
             .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (output.Length == 0) output = [process.ExitCode == 0 ? "frpc verify：配置有效。" : "frpc verify：配置无效。"];
         return (process.ExitCode, output);
     }
 
-    private void KillFrpc()
-    {
-        try
-        {
-            if (_frpc is { HasExited: false }) _frpc.Kill(entireProcessTree: true);
-        }
-        catch { }
-    }
-
     private void AppendLog(string message)
     {
         var cleaned = LogText.Clean(message);
+        if (cleaned.Contains("login to server success", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_diagnostic is not null)
+            {
+                _diagnostic = null;
+                if (_lastStatus is { State: ServiceRuntimeState.Running } running)
+                    WriteStatus(running with
+                    {
+                        UpdatedAt = DateTimeOffset.Now,
+                        DiagnosticSummary = null,
+                        DiagnosticDetail = null,
+                        DiagnosticSeverity = DiagnosticSeverity.None
+                    });
+            }
+        }
+
         var diagnostic = Diagnostics.RuntimeLine(cleaned);
         if (diagnostic is not null)
         {
@@ -303,7 +352,7 @@ internal sealed class FrpcWindowsService : ServiceBase
         {
             lock (_logLock)
             {
-                var bytes = Encoding.UTF8.GetBytes($"{DateTime.Now:HH:mm:ss}  {cleaned}{Environment.NewLine}");
+                var bytes = Encoding.UTF8.GetBytes($"{LogText.Normalize(cleaned)}{Environment.NewLine}");
                 using var stream = new FileStream(_options.LogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
                 stream.Write(bytes);
             }

@@ -22,21 +22,40 @@ public static class StartupRegistration
 
     public static bool IsEnabled()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
-        var value = key?.GetValue(ValueName) as string;
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        var executable = value.Trim();
-        if (executable.StartsWith('"'))
+        try
         {
-            var end = executable.IndexOf('"', 1);
-            if (end > 1) executable = executable[1..end];
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+            var value = key?.GetValue(ValueName) as string;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            var executable = value.Trim();
+            if (executable.StartsWith('"'))
+            {
+                var end = executable.IndexOf('"', 1);
+                if (end > 1) executable = executable[1..end];
+            }
+            else
+            {
+                var space = executable.IndexOf(' ');
+                if (space > 0) executable = executable[..space];
+            }
+
+            var current = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(current)) return false;
+            // 旧版本或旧安装目录的启动项会让 Windows 拉起另一个副本，开关应显示为关闭。
+            return string.Equals(
+                Path.GetFullPath(executable).TrimEnd(Path.DirectorySeparatorChar),
+                Path.GetFullPath(current).TrimEnd(Path.DirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
         }
-        else
+        catch (Exception exception) when (exception is ArgumentException
+            or NotSupportedException
+            or PathTooLongException
+            or System.Security.SecurityException
+            or UnauthorizedAccessException
+            or IOException)
         {
-            var space = executable.IndexOf(' ');
-            if (space > 0) executable = executable[..space];
+            return false;
         }
-        return File.Exists(executable);
     }
 
     /// <summary>

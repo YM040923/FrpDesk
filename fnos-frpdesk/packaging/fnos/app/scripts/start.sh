@@ -68,8 +68,13 @@ fi
 rm -f "$PID_FILE"
 
 mkdir -p "$(dirname "$PID_FILE")" "$(dirname "$LOG_FILE")" "$FRPDESK_DATA_DIR"
-if [ -n "$APP_RUNTIME_USER" ] && [ "$(id -u)" -eq 0 ] && id "$APP_RUNTIME_USER" >/dev/null 2>&1; then
-  nohup runuser -u "$APP_RUNTIME_USER" -- "$APP_DIR/bin/frpdesk-core" >> "$LOG_FILE" 2>&1 &
+if [ -n "$APP_RUNTIME_USER" ] && [ "$(id -u)" -eq 0 ]; then
+  if id "$APP_RUNTIME_USER" >/dev/null 2>&1; then
+    nohup runuser -u "$APP_RUNTIME_USER" -- "$APP_DIR/bin/frpdesk-core" >> "$LOG_FILE" 2>&1 &
+  else
+    echo "Warning: Runtime user '$APP_RUNTIME_USER' does not exist; starting core as root" >&2
+    nohup "$APP_DIR/bin/frpdesk-core" >> "$LOG_FILE" 2>&1 &
+  fi
 else
   nohup "$APP_DIR/bin/frpdesk-core" >> "$LOG_FILE" 2>&1 &
 fi

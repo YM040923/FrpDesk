@@ -84,6 +84,11 @@ func (m *Manager) Start(id, source string, recover bool) (model.Instance, error)
 		m.mu.Unlock()
 		return out, nil
 	}
+	if x.Status == Starting {
+		out := x.Instance
+		m.mu.Unlock()
+		return out, fmt.Errorf("实例正在启动中")
+	}
 	if err := m.setDesiredLocked(id, recover); err != nil {
 		out := m.failLocked(x, err)
 		m.mu.Unlock()
@@ -114,8 +119,23 @@ func (m *Manager) Start(id, source string, recover bool) (model.Instance, error)
 		m.mu.Unlock()
 		return out, err
 	}
+	config := x.ConfigPath
 	m.mu.Unlock()
-	return m.launch(id, frpc, x.ConfigPath)
+	instance, err := m.launch(id, frpc, config)
+	if err != nil {
+		m.mu.Lock()
+		y := m.items[id]
+		if y != nil && (y.stopping || !y.Desired || y.cmd == nil) {
+			if y.cmd != nil && y.cmd.Process != nil {
+				_ = y.cmd.Process.Kill()
+			}
+			y.cmd = nil
+			y.Status = Stopped
+			y.PID = 0
+		}
+		m.mu.Unlock()
+	}
+	return instance, err
 }
 
 func (m *Manager) launch(id, frpc, config string) (model.Instance, error) {
@@ -203,9 +223,12 @@ func (m *Manager) Reload(id, source string) (model.Instance, error) {
 		x.source = source
 		x.ConfigPath = config
 	}
+	cmd := x.cmd
 	m.mu.Unlock()
-	if !ok || x.cmd == nil {
-		return m.Restart(id, source)
+	if !ok || cmd == nil {
+		_ = os.WriteFile(config, []byte(source), 0o600)
+		result, _ := m.Get(id)
+		return result, nil
 	}
 	_ = os.WriteFile(config, []byte(source), 0o600)
 	if err := runCommand(frpc, "reload", "--api-timeout", "3s", "-c", config); err != nil {
@@ -294,21 +317,39 @@ func (m *Manager) wait(id string, cmd *exec.Cmd) {
 	if !retry {
 		return
 	}
-	time.AfterFunc(delay, func() {
+	timer := time.AfterFunc(delay, func() {
+		m.mu.Lock()
+		y := m.items[id]
+		if y == nil || !y.Desired || y.stopping {
+			m.mu.Unlock()
+			return
+		}
+		m.mu.Unlock()
 		if _, e := m.launch(id, frpc, config); e != nil {
 			m.mu.Lock()
-			if y := m.items[id]; y != nil && y.Desired {
-				y.source = source
+			if z := m.items[id]; z != nil && z.Desired {
+				z.source = source
 			}
 			m.mu.Unlock()
 		}
 	})
+	m.mu.Lock()
+	if x2 := m.items[id]; x2 != nil {
+		x2.recoveryTimer = timer
+	}
+	m.mu.Unlock()
 	_ = err
 }
 func (m *Manager) capture(id string, r io.Reader) {
-	s := bufio.NewScanner(r)
-	for s.Scan() {
-		m.append(id, s.Text())
+	reader := bufio.NewReader(r)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if len(line) > 0 {
+			m.append(id, strings.TrimRight(string(line), "\r\n"))
+		}
+		if err != nil {
+			break
+		}
 	}
 }
 func (m *Manager) append(id, line string) {

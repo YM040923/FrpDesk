@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.4"
+  #define AppVersion "0.1.8"
 #endif
 #define AppName "FrpDesk"
 #define AppPublisher "FrpDesk"
@@ -46,6 +46,7 @@ Name: "autostart"; Description: "登录 Windows 后自动启动 FrpDesk"; GroupD
 
 [Files]
 Source: "..\artifacts\FrpDesk-{#AppVersion}-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "Stop-Foreground.ps1"; DestDir: "{tmp}"; Flags: dontcopy
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\assets\FrpDesk.ico"
@@ -63,6 +64,8 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Names: TArrayOfString;
   I: Integer;
+  ResultCode: Integer;
+  StopScript: String;
 begin
   Result := '';
   if RegGetSubkeyNames(HKLM, 'SYSTEM\CurrentControlSet\Services', Names) then
@@ -75,6 +78,17 @@ begin
         Exit;
       end;
     end;
+  end;
+
+  // 旧版被关闭后，它启动的前台 frpc 会成为孤儿进程并锁住 assets\frpc.exe。
+  // 只结束安装目录内的 FrpDesk.exe 和 frpc.exe，避免升级时 DeleteFile 报拒绝访问。
+  ExtractTemporaryFile('Stop-Foreground.ps1');
+  StopScript := ExpandConstant('{tmp}\Stop-Foreground.ps1');
+  if (not Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -File "' + StopScript + '" -InstallRoot "' + ExpandConstant('{app}') + '"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then
+  begin
+    Result := '无法关闭仍在运行的 FrpDesk 或 frpc。请从系统托盘退出 FrpDesk，并停止正在运行的实例，然后重试安装。';
   end;
 end;
 

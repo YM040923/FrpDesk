@@ -72,5 +72,10 @@ public sealed class AppSettingsStore
         };
         if (settings.BackdropMaterial is not ("Mica" or "Mica Alt" or "Acrylic" or "Acrylic Thin"))
             settings.BackdropMaterial = "Mica";
+        // 与 FrpDesk.WinUI/ThemePalette.cs 的 Key 保持一致
+        if (settings.Theme is not ("ink" or "pine" or "clay" or "iris"))
+            settings.Theme = "ink";
+        // 侧栏只剩两态；早先存过 "off"（整片隐藏）的配置按图标态处理
+        settings.RailMode = settings.RailMode switch { "icon" or "off" => "icon", _ => "wide" };
     }
 }

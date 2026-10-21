@@ -1,6 +1,6 @@
 # FrpDesk Windows 桌面版
 
-FrpDesk Windows 版用于在一台电脑上管理多个独立的 `frpc` TOML 配置。当前版本为 `0.1.4`，使用 C#、WinUI 3、Windows App SDK 2.5.1 和 .NET 10。
+FrpDesk Windows 版用于在一台电脑上管理多个独立的 `frpc` TOML 配置。当前版本为 `0.1.8`，使用 C#、WinUI 3、Windows App SDK 2.5.1 和 .NET 10。
 
 ## 系统要求
 
@@ -21,8 +21,8 @@ FrpDesk Windows 版用于在一台电脑上管理多个独立的 `frpc` TOML 配
 
 ## 安装与数据
 
-- **安装程序**：运行 `FrpDesk-0.1.4-win-x64-setup.exe`，按提示安装到 `Program Files`。安装程序需要管理员授权，用于管理 Windows 服务。
-- **便携版**：解压 `FrpDesk-0.1.4-win-x64.zip` 后运行 `FrpDesk.exe`。便携 ZIP 不是安装程序；启用后台服务时仍会请求管理员授权。
+- **安装程序**：运行 `FrpDesk-0.1.8-win-x64-setup.exe`，按提示安装到 `Program Files`。安装程序需要管理员授权，用于管理 Windows 服务。
+- **便携版**：解压 `FrpDesk-0.1.8-win-x64.zip` 后运行 `FrpDesk.exe`。便携 ZIP 不是安装程序；启用后台服务时仍会请求管理员授权。
 - **升级前**：退出 FrpDesk，并在应用中关闭所有后台服务。若仍有 `FrpDesk-Instance-*` 服务注册，安装程序会停止并提示先处理服务。
 - **卸载**：从 Windows“已安装的应用”卸载。卸载程序只清理 FrpDesk 自有的服务和程序文件；配置、TOML 和本地日志保留在 `%LOCALAPPDATA%\FrpDesk`。
 
@@ -46,7 +46,7 @@ dotnet run --project .\FrpDesk.WinUI\FrpDesk.WinUI.csproj
 先完成上面的依赖恢复和 FRP 客户端下载，再运行：
 
 ```powershell
-.\scripts\Publish-Release.ps1 -Version 0.1.4
+.\scripts\Publish-Release.ps1 -Version 0.1.8
 ```
 
 脚本在 `artifacts/` 生成自包含应用目录、便携 ZIP、Inno Setup 安装程序及 SHA-256 校验文件。未提供 Authenticode 证书时，应用和安装程序不会签名，Windows SmartScreen 可能显示警告。
@@ -55,4 +55,4 @@ dotnet run --project .\FrpDesk.WinUI\FrpDesk.WinUI.csproj
 
 FrpDesk 将配置、设置和诊断数据保存在本机 `%LOCALAPPDATA%\FrpDesk`。运行时会启动随包提供的 `frpc.exe`，并按用户配置连接 FRP 服务端。
 
-此仓库目前为私有仓库，FrpDesk 本身尚未声明再分发许可证。随包 FRP 客户端适用 [`assets/frp-LICENSE`](assets/frp-LICENSE)；该上游许可证不覆盖 FrpDesk。
+FrpDesk 本身尚未声明再分发许可证。随包 FRP 客户端适用 [`assets/frp-LICENSE`](assets/frp-LICENSE)；该上游许可证不覆盖 FrpDesk。

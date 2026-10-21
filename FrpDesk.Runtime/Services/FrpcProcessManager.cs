@@ -63,18 +63,24 @@ public sealed class FrpcProcessManager
                 if (!process.Start()) throw new InvalidOperationException("frpc 进程未能启动。");
                 if (!_processes.TryAdd(profile.Id, process))
                 {
-                    process.Kill(entireProcessTree: true);
+                    try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
                     process.Dispose();
                     throw new InvalidOperationException("该实例已有进程在运行。");
                 }
 
+                process.Exited += (_, _) => HandleExit(profile, process);
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
+                if (process.HasExited)
+                {
+                    HandleExit(profile, process);
+                    return;
+                }
                 profile.ClearDiagnostic();
                 SaveDiagnosticSafely(profile);
                 profile.State = "进程运行中";
+                profile.MarkStarted();
                 AddLog(profile, "配置校验通过，frpc 已启动。");
-                if (process.HasExited) HandleExit(profile, process);
             }
             catch (Exception exception)
             {
@@ -106,6 +112,7 @@ public sealed class FrpcProcessManager
             if (!_processes.TryGetValue(profile.Id, out var process))
             {
                 profile.State = "已停止";
+                if (profile.StartedAt is not null) profile.MarkStopped();
                 return;
             }
 
@@ -113,8 +120,32 @@ public sealed class FrpcProcessManager
             _stopping[profile.Id] = 0;
             try
             {
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
-                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8));
+                try
+                {
+                    if (!process.HasExited) process.Kill(entireProcessTree: true);
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException)
+                {
+                    // 进程恰好在停止前退出，Exited 回调已完成状态更新。
+                }
+                catch (System.ComponentModel.Win32Exception exception)
+                {
+                    throw new InvalidOperationException($"无法结束 frpc 进程：{exception.Message}", exception);
+                }
+
+                try
+                {
+                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(8));
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException)
+                {
+                    // 同上：Process 对象已被退出回调释放。
+                }
+                catch (TimeoutException)
+                {
+                    throw new InvalidOperationException("frpc 未能在 8 秒内停止，请重试。");
+                }
+
                 HandleExit(profile, process);
             }
             finally
@@ -131,8 +162,7 @@ public sealed class FrpcProcessManager
 
     public async Task StopAllAsync(IEnumerable<TunnelProfile> profiles)
     {
-        var running = profiles.Where(profile => _processes.ContainsKey(profile.Id)).ToArray();
-        await Task.WhenAll(running.Select(StopAsync));
+        await Task.WhenAll(profiles.Select(StopAsync));
     }
 
     public async Task ReloadAsync(TunnelProfile profile, string configPath)
@@ -239,9 +269,8 @@ public sealed class FrpcProcessManager
         }
         catch (TimeoutException)
         {
-            process.Kill(entireProcessTree: true);
-            try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(2)); }
-            catch (TimeoutException) { }
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+            try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(2)); } catch (TimeoutException) { }
             throw new TimeoutException("配置校验超时，已终止校验进程。");
         }
 
@@ -293,11 +322,10 @@ public sealed class FrpcProcessManager
     private void AddLog(TunnelProfile profile, string message)
     {
         var cleaned = LogText.Clean(message);
-        var line = $"{DateTime.Now:HH:mm:ss}  {cleaned}";
         var diagnostic = Diagnostics.RuntimeLine(cleaned, ServerHint(profile.Config));
         _dispatch(() =>
         {
-            profile.AddLog(line);
+            profile.AddLog(cleaned);
             if (cleaned.Contains("login to server success", StringComparison.OrdinalIgnoreCase))
             {
                 profile.ClearDiagnostic();
@@ -320,12 +348,13 @@ public sealed class FrpcProcessManager
             _dispatch(() =>
             {
                 profile.State = expected ? "已停止" : "已退出";
+                profile.MarkStopped();
                 if (!expected)
                 {
                     var diagnostic = Diagnostics.ProcessExited(exitCode);
                     profile.SetDiagnostic(diagnostic.Summary, diagnostic.Detail, diagnostic.Severity, diagnostic.LastExitCode, diagnostic.LastFailureAt);
                     SaveDiagnosticSafely(profile);
-                    profile.AddLog($"{DateTime.Now:HH:mm:ss}  frpc 已退出（代码 {exitCode}）。");
+                    profile.AddLog($"frpc 已退出（代码 {exitCode}）。");
                 }
             });
             process.Dispose();
