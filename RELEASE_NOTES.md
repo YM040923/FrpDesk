@@ -1,3 +1,34 @@
+# FrpDesk 0.1.10
+
+## Interface
+
+- 启用后台服务 moved from Settings to the 运行概览 header, next to 运行服务. Both actions now sit on the page that shows the current profile, so the control no longer reads like an application-wide switch.
+- The button tooltip now names the profile it acts on, for example 只影响「昆明」这一个配置。
+- Removed the Settings 后台服务 card, which duplicated the same control with a profile label.
+
+---
+
+# FrpDesk 0.1.9
+
+## Fixes
+
+- Multi-line TOML arrays such as a `custom_domains` list split across lines are now parsed and rewritten correctly. Editing a tunnel no longer leaves orphaned array lines behind or produces a config `frpc` rejects.
+- Appending or updating a tunnel now rejects a duplicate proxy name instead of writing a config where the second definition silently overrides the first.
+- Stopping the background service no longer leaves an orphan `frpc.exe` running as LocalSystem. Cancellation and the process handle are now coordinated under one lock.
+- The background task check no longer spawns `schtasks.exe` on every poll for profiles that have no legacy task. Negative results are cached for five minutes.
+- The log view updates incrementally instead of rebuilding every line on each poll, which removes the flicker and most of the CPU cost on a busy instance.
+- Reading the startup registration state, and saving or restoring the window layout, no longer crash the app when the registry or the profile folder refuses the write.
+- Moment labels in the log no longer depend on the machine locale.
+
+## fnOS
+
+- A recovery timer is now tracked and cancelled, so stopping an instance cannot be followed by an automatic relaunch.
+- Starting an instance that is already starting is rejected instead of launching a second `frpc`.
+- Log capture no longer drops lines longer than 64 KB, and `reload` reads the process handle under the lock.
+- `stop.sh` verifies the PID actually belongs to FrpDesk before killing it, matching `start.sh`.
+
+---
+
 # FrpDesk 0.1.8
 
 ## Fixes

@@ -136,9 +136,15 @@
                     <StackPanel x:Name="HomeLayout" Margin="26,22,26,22" Spacing="18">
                         <Grid>
                             <TextBlock Style="{StaticResource PageTitle}" Text="运行概览" VerticalAlignment="Center" />
-                            <Button x:Name="RunButton" Content="运行服务" Style="{StaticResource SignalButton}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="124"
-                                    Click="RunButton_Click" />
+                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button x:Name="BackgroundServiceButton" Content="启用后台服务"
+                                        Style="{StaticResource QuietButton}" MinWidth="124"
+                                        AutomationProperties.Name="当前配置的后台服务"
+                                        Click="BackgroundServiceButton_Click" />
+                                <Button x:Name="RunButton" Content="运行服务" Style="{StaticResource SignalButton}"
+                                        MinWidth="124" Click="RunButton_Click" />
+                            </StackPanel>
                         </Grid>
 
                         <Border x:Name="ServiceSummaryCard" Style="{StaticResource Card}"
@@ -744,25 +750,6 @@
                                         </StackPanel>
                                         <ToggleSwitch x:Name="AutoStartToggle" Grid.Column="1" Style="{StaticResource RowSwitch}"
                                                       AutomationProperties.Name="登录 Windows 后自动启动" />
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource Card}">
-                                <StackPanel>
-                                    <Grid Background="{StaticResource SoftBrush}" Padding="20,13">
-                                        <TextBlock Style="{StaticResource BandTitle}" Text="后台服务" />
-                                    </Grid>
-                                    <Grid Padding="20,18" ColumnSpacing="26">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="3" VerticalAlignment="Center" MinWidth="0">
-                                            <TextBlock Style="{StaticResource RowTitle}" Text="当前配置的后台服务" />
-                                            <TextBlock x:Name="BackgroundServiceProfileText" Style="{StaticResource RowDesc}"
-                                                       Text="尚未选择配置。" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                        <Button x:Name="BackgroundServiceButton" Grid.Column="1"
-                                                Style="{StaticResource QuietButton}" VerticalAlignment="Center"
-                                                Click="BackgroundServiceButton_Click" />
                                     </Grid>
                                 </StackPanel>
                             </Border>

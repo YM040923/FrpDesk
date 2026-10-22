@@ -2258,7 +2258,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var profile = SelectedProfile;
         if (profile is null)
         {
-            BackgroundServiceProfileText.Text = "尚未选择配置。";
             BackgroundServiceButton.Content = "启用后台服务";
             BackgroundServiceButton.IsEnabled = false;
             ToolTipService.SetToolTip(BackgroundServiceButton, "请先添加或选择一个配置。");
@@ -2266,7 +2265,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         var isLegacy = profile.BackgroundStatus.StartsWith("旧版后台任务", StringComparison.Ordinal);
-        BackgroundServiceProfileText.Text = $"{profile.Name} · {profile.DisplayState}";
         BackgroundServiceButton.Content = isLegacy
             ? "切换为后台服务"
             : profile.IsBackgroundConfigured
@@ -2274,7 +2272,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 : "启用后台服务";
         BackgroundServiceButton.IsEnabled = !profile.IsBusy && !profile.IsRunning;
         ToolTipService.SetToolTip(BackgroundServiceButton,
-            profile.IsRunning ? "请先停止当前运行中的实例。" : null);
+            profile.IsRunning ? "请先停止当前运行中的实例。" : $"只影响「{profile.Name}」这一个配置。");
     }
 
     private void UpdateSelectedPanel()
