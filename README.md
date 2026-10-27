@@ -16,6 +16,6 @@ Windows 版的系统要求、安装步骤和本地构建命令见 [Windows 文�
 
 ## 仓库与许可
 
-FrpDesk 本身尚未声明可供第三方再分发的许可证；在补充许可证前，请勿再分发修改后的版本。Windows 包含的 FRP 客户端遵循 [`assets/frp-LICENSE`](assets/frp-LICENSE) 中的上游许可证，该许可证不代表 FrpDesk 本身采用相同许可证。
+FrpDesk 本身采用 MIT License，见 [`LICENSE`](LICENSE)。Windows 版本包含的 FRP 客户端遵循 [`assets/frp-LICENSE`](assets/frp-LICENSE) 中的上游许可证；该许可证不代表 FrpDesk 本身采用相同许可证。
 
 飞牛 FPK 先前通过本地包结构检查；本轮未重新验证 NAS 应用中心的原位升级和数据保留。
